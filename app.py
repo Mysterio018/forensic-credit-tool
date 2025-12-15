@@ -4,31 +4,34 @@ import plotly.express as px
 import plotly.graph_objects as go
 import numpy as np
 
-# --- 1. APP CONFIGURATION & SCREENER-STYLE STYLING ---
+# --- 1. APP CONFIGURATION & STYLING ---
 st.set_page_config(
     page_title="Credit Screener Tool",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Force Light Theme & Screener Styling
+# Force Light Theme & Fix Text Visibility
 st.markdown("""
     <style>
-    /* Force Light Background for the whole app */
+    /* Force Light Background */
     .stApp {
         background-color: #ffffff;
         color: #000000;
     }
     
-    /* Sidebar styling */
+    /* Sidebar Styling */
     section[data-testid="stSidebar"] {
-        background-color: #f7f9fa;
-        border-right: 1px solid #e0e0e0;
+        background-color: #f8f9fa; /* Light Grey */
+        border-right: 1px solid #e9ecef;
     }
     
-    /* Global Text Visibility Fix */
-    p, h1, h2, h3, h4, h5, span, div, label {
-        color: #2c3e50; /* Dark Grey for readability */
+    /* Widget Text Fix (Sidebar inputs) */
+    div[data-testid="stSelectbox"] > div > div {
+        color: white !important; /* Text inside dark dropdowns */
+    }
+    input {
+        color: #000000 !important; /* Text inside inputs */
     }
     
     /* Metric Cards */
@@ -40,10 +43,12 @@ st.markdown("""
         box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
     div[data-testid="stMetricLabel"] {
-        color: #666 !important;
+        color: #555 !important;
+        font-weight: 500;
     }
     div[data-testid="stMetricValue"] {
         color: #000 !important;
+        font-weight: 700;
     }
     
     /* Tabs */
@@ -55,7 +60,7 @@ st.markdown("""
         height: 50px;
         white-space: pre-wrap;
         background-color: transparent;
-        color: #666;
+        color: #555;
         font-size: 15px;
         font-weight: 600;
         border: none;
@@ -66,25 +71,19 @@ st.markdown("""
         border-bottom: 3px solid #008000;
     }
 
-    /* Verdict Box - Fixed Visibility */
+    /* Verdict Box */
     .verdict-box {
-        background-color: #f0fdf4; /* Light Green */
+        background-color: #f0fdf4; 
         padding: 25px;
         border: 1px solid #bbf7d0;
         border-radius: 8px;
         margin-bottom: 20px;
-        color: #1f2937; /* Dark Text */
-    }
-    .verdict-title {
-        font-size: 24px;
-        font-weight: bold;
-        color: #166534; /* Darker Green title */
-        margin-bottom: 10px;
+        color: #1f2937;
     }
     
-    /* Alerts */
-    .stAlert {
-        color: #000 !important; /* Force alert text black */
+    /* Global Text Visibility */
+    p, h1, h2, h3, h4, h5, li {
+        color: #212529 !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -116,7 +115,6 @@ def calculate_metrics(df):
     df['ROA'] = (df['PAT'] / df['TotalAssets'].replace(0, 1)) * 100
     df['ROE'] = (df['PAT'] / df['Equity'].replace(0, 1)) * 100
     
-    # NEW RATIOS
     df['ROCE'] = (df['EBIT'] / (df['TotalDebt'] + df['Equity']).replace(0, 1)) * 100
     df['Debtor_Days'] = (df['Receivables'] / df['Revenue'].replace(0, 1)) * 365
     
@@ -264,7 +262,7 @@ def main():
             "Forensic Checks", "Distress & EWS", "Cash Flow", "Verdict"
         ])
 
-        # TAB 1: OVERVIEW
+        # TAB 1: OVERVIEW (UPDATED WITH CHARTS)
         with tabs[0]:
             st.subheader("Executive Snapshot")
             c1, c2, c3, c4, c5 = st.columns(5)
@@ -274,20 +272,30 @@ def main():
             c4.metric("Op. Cash Flow", f"{row['CFO']:,.0f}")
             c5.metric("Composite Score", f"{int(row['Credit_Score'])}")
             
-            score = row['Credit_Score']
-            if score > 75:
-                banner_color, border_color, text_status, text_color = "#e6fffa", "#008000", "LOW RISK", "#008000"
-            elif score > 50:
-                banner_color, border_color, text_status, text_color = "#fffaf0", "#d97706", "MEDIUM RISK", "#d97706"
-            else:
-                banner_color, border_color, text_status, text_color = "#fff5f5", "#dc2626", "HIGH RISK", "#dc2626"
+            # --- OVERVIEW CHARTS ---
+            st.markdown("### 📊 Key Financial Visuals")
+            g1, g2 = st.columns(2)
             
-            st.markdown(f"""
-                <div style="background-color: {banner_color}; padding: 15px; border-radius: 6px; border-left: 5px solid {border_color}; margin-top: 20px;">
-                    <h4 style="margin:0; color: {text_color};">Risk Category: {text_status}</h4>
-                    <p style="margin:0; color: #333;">Based on a weighted analysis of solvency, liquidity, and forensic indicators.</p>
-                </div>
-            """, unsafe_allow_html=True)
+            with g1:
+                # Capital Structure (Donut)
+                cap_fig = go.Figure(data=[go.Pie(
+                    labels=['Total Debt', 'Equity'],
+                    values=[row['TotalDebt'], row['Equity']],
+                    hole=.4,
+                    marker_colors=['#dc2626', '#008000']
+                )])
+                cap_fig.update_layout(title="Capital Structure (Debt vs Equity)", font=dict(color='black'), height=300)
+                st.plotly_chart(cap_fig, use_container_width=True)
+            
+            with g2:
+                # Profitability Bar
+                prof_fig = go.Figure([go.Bar(
+                    x=['Revenue', 'EBIT', 'Net Profit'],
+                    y=[row['Revenue'], row['EBIT'], row['PAT']],
+                    marker_color=['#2563eb', '#3b82f6', '#008000']
+                )])
+                prof_fig.update_layout(title="Profitability Composition", font=dict(color='black'), height=300)
+                st.plotly_chart(prof_fig, use_container_width=True)
 
         # TAB 2: FINANCIAL ANALYSIS
         with tabs[1]:
@@ -310,9 +318,9 @@ def main():
             c7.metric("Debt-to-Equity", f"{row['Debt_Equity']:.2f}x")
             c8.metric("Interest Coverage", f"{row['ICR']:.2f}x")
 
-        # TAB 3: DUPONT (FIXED CHART COLORS)
+        # TAB 3: DUPONT (FIXED TEXT VISIBILITY)
         with tabs[2]:
-            st.subheader("A. DuPont Decomposition (ROE Drivers)")
+            st.subheader("A. DuPont Decomposition")
             dupont_df = pd.DataFrame({
                 'Component': ['Net Margin', 'Asset Turnover', 'Financial Leverage'],
                 'Contribution': [row['Dupont_NPM']*100, row['Asset_Turnover'], row['Fin_Leverage']],
@@ -321,9 +329,8 @@ def main():
             fig_dupont = px.bar(dupont_df, x='Component', y='Contribution', color='Type', 
                                 title=f"ROE: {row['ROE']:.1f}% Breakdown", text_auto='.2f',
                                 color_discrete_map={'Efficiency': '#3b82f6', 'Risk': '#f59e0b'})
-            # Force black text for white background
             fig_dupont.update_layout(height=350, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', 
-                                     font=dict(color='black'))
+                                     font=dict(color='black')) # FORCE BLACK TEXT
             st.plotly_chart(fig_dupont, use_container_width=True)
 
             st.divider()
@@ -346,32 +353,33 @@ def main():
                 if row['Beneish_Flag_DSRI'] == 1: st.error("Alert: Receivables growing faster than Revenue.")
                 else: st.success("Pass: Revenue growth consistent with Receivables.")
 
-        # TAB 5: DISTRESS (FIXED GAUGE VISIBILITY)
+        # TAB 5: DISTRESS (FIXED GAUGE CUTOFF)
         with tabs[4]:
             st.subheader("Financial Distress Model")
             z = row['Z_Score']
             fig_gauge = go.Figure(go.Indicator(
                 mode = "gauge+number", value = z,
-                title = {'text': "Altman Z-Score", 'font': {'color': 'black'}}, # Force Title Black
-                number = {'font': {'color': 'black'}}, # Force Number Black
+                title = {'text': "Altman Z-Score", 'font': {'color': 'black'}},
+                number = {'font': {'color': 'black'}},
                 gauge = {
-                    'axis': {'range': [None, 5], 'tickfont': {'color': 'black'}}, # Force Ticks Black
+                    'axis': {'range': [None, 5], 'tickfont': {'color': 'black'}},
                     'bar': {'color': "black"},
                     'steps': [{'range': [0, 1.23], 'color': "#ffcccb"}, 
                               {'range': [1.23, 2.9], 'color': "#fff4cc"}, 
                               {'range': [2.9, 5], 'color': "#d4edda"}]
                 }
             ))
-            fig_gauge.update_layout(height=300, margin=dict(t=30,b=10,l=20,r=20), 
+            # INCREASED MARGINS TO PREVENT CUTOFF
+            fig_gauge.update_layout(height=350, margin=dict(t=50, b=50, l=30, r=30), 
                                     paper_bgcolor='rgba(0,0,0,0)', font={'color': 'black'})
             st.plotly_chart(fig_gauge, use_container_width=True)
             
-            if z > 2.9: st.success("Zone: SAFE (> 2.9) - Low Bankruptcy Probability")
-            elif z > 1.23: st.warning("Zone: GREY (1.23 - 2.9) - Monitor Closely")
-            else: st.error("Zone: DISTRESS (< 1.23) - High Bankruptcy Risk")
+            if z > 2.9: st.success("Zone: SAFE (> 2.9)")
+            elif z > 1.23: st.warning("Zone: GREY (1.23 - 2.9)")
+            else: st.error("Zone: DISTRESS (< 1.23)")
 
             st.divider()
-            st.subheader("Early Warning Signals (EWS)")
+            st.subheader("Early Warning Signals")
             ews_list = []
             if row['Current_Ratio'] < 1.0: ews_list.append("Liquidity Stress: Current Ratio < 1.0")
             if row['Debt_Equity'] > 2.0: ews_list.append("Leverage Warning: D/E > 2.0")
@@ -381,7 +389,7 @@ def main():
             else: 
                 for signal in ews_list: st.markdown(f"🔸 {signal}")
 
-        # TAB 6: CASH FLOW (FIXED TEXT COLOR)
+        # TAB 6: CASH FLOW (FIXED TEXT VISIBILITY)
         with tabs[5]:
             st.subheader("Cash Flow Structure")
             cf_df = pd.DataFrame({
@@ -390,25 +398,23 @@ def main():
             })
             fig_cf = px.bar(cf_df, x='Activity', y='Amount', color='Amount', 
                             title="Cash Flow Waterfall", color_continuous_scale='Bluered_r')
-            # Force black text for white background
+            # Force black text
             fig_cf.update_layout(height=350, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', 
                                  font=dict(color='black'))
             st.plotly_chart(fig_cf, use_container_width=True)
             st.info(f"**Implied Life Cycle Stage:** {row['Life_Cycle']}")
 
-        # TAB 7: DECISION (FIXED VISIBILITY)
+        # TAB 7: DECISION
         with tabs[6]:
             verdict, r_profile, color, rec, forensics = generate_formal_memo(row)
             
-            # 1. Verdict Box (Light Green Background, Dark Text)
             st.markdown(f"""
                 <div class="verdict-box">
-                    <div class="verdict-title">{verdict}</div>
+                    <div style="font-size: 24px; font-weight: bold; color: {color}; margin-bottom: 10px;">{verdict}</div>
                     <div style="font-size: 16px; color: #333;">Risk Profile: <strong>{r_profile}</strong> | Score: {int(row['Credit_Score'])}/100</div>
                 </div>
             """, unsafe_allow_html=True)
             
-            # 2. Structured Note (Force Text Color)
             st.subheader("Credit Assessment Note")
             st.markdown(f"""
             <div style="color: #333;">
@@ -417,8 +423,7 @@ def main():
             <strong>2. Forensic & Compliance Findings</strong><br>
             {forensics}<br><br>
             <strong>3. Final Recommendation</strong><br>
-            Based on the quantitative models and forensic ratios, the system recommends a decision to <strong>{verdict}</strong>.
-            This recommendation is automated based on the input financial data.
+            Based on the quantitative models, the system recommends: <strong>{verdict}</strong>.
             </div>
             """, unsafe_allow_html=True)
 
