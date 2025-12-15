@@ -186,34 +186,47 @@ def get_rule_based_summary(row, company):
     """, color
 
 def get_gemini_summary(row, company, key):
-    try:
-        genai.configure(api_key=key)
-        # UPDATED MODEL: Using gemini-1.5-flash for speed and reliability
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        
-        prompt = f"""
-        Act as a senior credit risk officer. Write a formal credit memo for **{company}**.
-        
-        **Financial Data:**
-        - Revenue: {row['Revenue']} | Net Profit: {row['PAT']} | CFO: {row['CFO']}
-        - Debt: {row['TotalDebt']} | Equity: {row['Equity']}
-        
-        **Forensic Indicators:**
-        - Z-Score: {row['Z_Score']:.2f}
-        - Earnings Quality (CFO/PAT): {row['CFO_to_PAT']:.2f}
-        - Beneish Flag: {'Detected' if row['Beneish_Flag_DSRI']==1 else 'None'}
-        - Life Cycle Stage: {row['Life_Cycle']}
-        
-        **Task:**
-        1. Classify Risk (Low/Medium/High).
-        2. Analyze Strengths vs Risks.
-        3. Provide a Forensic Verdict.
-        4. Final Recommendation (Approve/Reject).
-        """
-        response = model.generate_content(prompt)
-        return f"**Analysis Mode:** 🧠 Live AI (Gemini Flash)\n\n{response.text}", "#4e8cff"
-    except Exception as e:
-        return f"⚠️ AI Error: {str(e)}\n\n(Falling back to rules...)", "#ff4b4b"
+    genai.configure(api_key=key)
+    
+    # ROBUST MODEL SELECTOR: Tries newest first, falls back to older ones
+    # This prevents 404 errors if a specific model version is deprecated
+    models_to_try = ['gemini-1.5-flash', 'gemini-pro', 'gemini-1.0-pro']
+    
+    model = None
+    last_error = ""
+    
+    prompt = f"""
+    Act as a senior credit risk officer. Write a formal credit memo for **{company}**.
+    
+    **Financial Data:**
+    - Revenue: {row['Revenue']} | Net Profit: {row['PAT']} | CFO: {row['CFO']}
+    - Debt: {row['TotalDebt']} | Equity: {row['Equity']}
+    
+    **Forensic Indicators:**
+    - Z-Score: {row['Z_Score']:.2f}
+    - Earnings Quality (CFO/PAT): {row['CFO_to_PAT']:.2f}
+    - Beneish Flag: {'Detected' if row['Beneish_Flag_DSRI']==1 else 'None'}
+    - Life Cycle Stage: {row['Life_Cycle']}
+    
+    **Task:**
+    1. Classify Risk (Low/Medium/High).
+    2. Analyze Strengths vs Risks.
+    3. Provide a Forensic Verdict.
+    4. Final Recommendation (Approve/Reject).
+    """
+
+    for model_name in models_to_try:
+        try:
+            model = genai.GenerativeModel(model_name)
+            response = model.generate_content(prompt)
+            return f"**Analysis Mode:** 🧠 Live AI ({model_name})\n\n{response.text}", "#4e8cff"
+        except Exception as e:
+            last_error = str(e)
+            continue # Try the next model
+            
+    # If all models fail
+    return f"⚠️ AI Error: Could not connect to Google AI. (Error: {last_error})\n\n(Falling back to rules...)", "#ff4b4b"
+
 
 # --- 6. MAIN UI LAYOUT ---
 def main():
