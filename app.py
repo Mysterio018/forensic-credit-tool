@@ -6,7 +6,7 @@ import numpy as np
 
 # --- 1. APP CONFIGURATION & STYLING ---
 st.set_page_config(
-    page_title="Credit Screener Tool",
+    page_title="AI-Assisted Forensic Credit Assessment Tool",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -27,9 +27,16 @@ st.markdown("""
     }
     
     /* Widget Text Fix (Sidebar inputs) */
-    div[data-testid="stSelectbox"] > div > div {
-        color: white !important; /* Text inside dark dropdowns */
+    /* This targets the text INSIDE the dropdown box */
+    div[data-testid="stSelectbox"] > div > div > div {
+        color: white !important; 
     }
+    /* This targets the text in the dropdown list options */
+    div[role="listbox"] div {
+        color: black !important;
+        background-color: white !important;
+    }
+
     input {
         color: #000000 !important; /* Text inside inputs */
     }
@@ -78,7 +85,7 @@ st.markdown("""
         border: 1px solid #bbf7d0;
         border-radius: 8px;
         margin-bottom: 20px;
-        color: #1f2937;
+        color: #1f2937; /* Dark Charcoal */
     }
     
     /* Global Text Visibility */
@@ -262,7 +269,7 @@ def main():
             "Forensic Checks", "Distress & EWS", "Cash Flow", "Verdict"
         ])
 
-        # TAB 1: OVERVIEW (UPDATED WITH CHARTS)
+        # TAB 1: OVERVIEW
         with tabs[0]:
             st.subheader("Executive Snapshot")
             c1, c2, c3, c4, c5 = st.columns(5)
@@ -272,7 +279,7 @@ def main():
             c4.metric("Op. Cash Flow", f"{row['CFO']:,.0f}")
             c5.metric("Composite Score", f"{int(row['Credit_Score'])}")
             
-            # --- OVERVIEW CHARTS ---
+            # --- OVERVIEW CHARTS (FIXED TEXT COLOR) ---
             st.markdown("### 📊 Key Financial Visuals")
             g1, g2 = st.columns(2)
             
@@ -284,7 +291,9 @@ def main():
                     hole=.4,
                     marker_colors=['#dc2626', '#008000']
                 )])
-                cap_fig.update_layout(title="Capital Structure (Debt vs Equity)", font=dict(color='black'), height=300)
+                cap_fig.update_layout(title="Capital Structure (Debt vs Equity)", 
+                                      font=dict(color='black'), # FORCE BLACK TEXT
+                                      height=300, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
                 st.plotly_chart(cap_fig, use_container_width=True)
             
             with g2:
@@ -292,9 +301,14 @@ def main():
                 prof_fig = go.Figure([go.Bar(
                     x=['Revenue', 'EBIT', 'Net Profit'],
                     y=[row['Revenue'], row['EBIT'], row['PAT']],
-                    marker_color=['#2563eb', '#3b82f6', '#008000']
+                    marker_color=['#2563eb', '#3b82f6', '#008000'],
+                    texttemplate='%{y:.2s}', textposition='auto'
                 )])
-                prof_fig.update_layout(title="Profitability Composition", font=dict(color='black'), height=300)
+                prof_fig.update_layout(title="Profitability Composition", 
+                                       font=dict(color='black'), # FORCE BLACK TEXT
+                                       xaxis=dict(tickfont=dict(color='black')),
+                                       yaxis=dict(tickfont=dict(color='black')),
+                                       height=300, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
                 st.plotly_chart(prof_fig, use_container_width=True)
 
         # TAB 2: FINANCIAL ANALYSIS
@@ -330,7 +344,9 @@ def main():
                                 title=f"ROE: {row['ROE']:.1f}% Breakdown", text_auto='.2f',
                                 color_discrete_map={'Efficiency': '#3b82f6', 'Risk': '#f59e0b'})
             fig_dupont.update_layout(height=350, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', 
-                                     font=dict(color='black')) # FORCE BLACK TEXT
+                                     font=dict(color='black'), # FORCE BLACK TEXT
+                                     xaxis=dict(tickfont=dict(color='black')),
+                                     yaxis=dict(tickfont=dict(color='black')))
             st.plotly_chart(fig_dupont, use_container_width=True)
 
             st.divider()
@@ -353,7 +369,7 @@ def main():
                 if row['Beneish_Flag_DSRI'] == 1: st.error("Alert: Receivables growing faster than Revenue.")
                 else: st.success("Pass: Revenue growth consistent with Receivables.")
 
-        # TAB 5: DISTRESS (FIXED GAUGE CUTOFF)
+        # TAB 5: DISTRESS (FIXED GAUGE CUTOFF & VISIBILITY)
         with tabs[4]:
             st.subheader("Financial Distress Model")
             z = row['Z_Score']
@@ -397,14 +413,17 @@ def main():
                 'Amount': [row['CFO'], row['CFI'], row['CFF']]
             })
             fig_cf = px.bar(cf_df, x='Activity', y='Amount', color='Amount', 
-                            title="Cash Flow Waterfall", color_continuous_scale='Bluered_r')
+                            title="Cash Flow Waterfall", color_continuous_scale='Bluered_r',
+                            text_auto='.2s')
             # Force black text
             fig_cf.update_layout(height=350, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', 
-                                 font=dict(color='black'))
+                                 font=dict(color='black'),
+                                 xaxis=dict(tickfont=dict(color='black')),
+                                 yaxis=dict(tickfont=dict(color='black')))
             st.plotly_chart(fig_cf, use_container_width=True)
             st.info(f"**Implied Life Cycle Stage:** {row['Life_Cycle']}")
 
-        # TAB 7: DECISION
+        # TAB 7: DECISION (FIXED TEXT VISIBILITY)
         with tabs[6]:
             verdict, r_profile, color, rec, forensics = generate_formal_memo(row)
             
@@ -417,8 +436,7 @@ def main():
             
             st.subheader("Credit Assessment Note")
             st.markdown(f"""
-            <div style="color: #333;">
-            <strong>1. Financial Assessment</strong><br>
+            <div style="color: #333;"> <strong>1. Financial Assessment</strong><br>
             {rec}<br><br>
             <strong>2. Forensic & Compliance Findings</strong><br>
             {forensics}<br><br>
