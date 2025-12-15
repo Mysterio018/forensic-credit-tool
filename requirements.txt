@@ -1,6 +1,5 @@
 streamlit
 pandas
 plotly
-
 numpy
-pip install google-generativeai
+google-generativeai
