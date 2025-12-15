@@ -26,17 +26,16 @@ st.markdown("""
         border-right: 1px solid #e9ecef;
     }
     
-    /* Widget Text Fix (Sidebar inputs) */
-    div[data-testid="stSelectbox"] > div > div > div {
-        color: white !important; 
+    /* --- SIDEBAR DROPDOWN FIX --- */
+    /* Forces the text inside the selectbox to be WHITE so it's visible on the black background */
+    div[data-testid="stSelectbox"] div[data-testid="stMarkdownContainer"] p {
+        color: white !important;
     }
-    div[role="listbox"] div {
-        color: black !important;
-        background-color: white !important;
-    }
-
-    input {
-        color: #000000 !important; /* Text inside inputs */
+    /* Ensures the dropdown box itself remains dark/black */
+    div[data-testid="stSelectbox"] > div > div {
+        background-color: #0e1117 !important;
+        color: white !important;
+        border: 1px solid #444;
     }
     
     /* Metric Cards */
@@ -88,7 +87,7 @@ st.markdown("""
     
     /* Global Text Visibility */
     p, h1, h2, h3, h4, h5, li, span, div {
-        color: #000000 !important;
+        color: #000000;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -195,13 +194,13 @@ def generate_formal_memo(row):
     if not forensic_notes:
         forensic_text = "No material forensic red flags detected."
     else:
-        forensic_text = "\n".join([f"• {note}" for note in forensic_notes])
+        forensic_text = "\n".join([f"- {note}" for note in forensic_notes])
 
     return verdict, risk_profile, color_hex, rec_text, forensic_text
 
 # --- 5. MAIN UI ---
 def main():
-    st.sidebar.title("AI-Assisted Forensic Credit Assessment Tool")
+    st.sidebar.title("Credit Assessment Tool")
     mode = st.sidebar.radio("Data Source", ["Select from Dataset", "Manual Data Entry"])
     
     row = None
@@ -277,7 +276,7 @@ def main():
             c4.metric("Op. Cash Flow", f"{row['CFO']:,.0f}")
             c5.metric("Composite Score", f"{int(row['Credit_Score'])}")
             
-            # --- OVERVIEW CHARTS (FORCED BLACK TEXT) ---
+            # --- OVERVIEW CHARTS ---
             st.markdown("### Key Financial Visuals")
             g1, g2 = st.columns(2)
             
@@ -288,12 +287,13 @@ def main():
                     values=[row['TotalDebt'], row['Equity']],
                     hole=.4,
                     marker_colors=['#dc2626', '#008000'],
-                    textfont=dict(color='black') # FORCE TEXT BLACK
+                    textfont=dict(color='black')
                 )])
                 cap_fig.update_layout(
-                    title={'text': "Capital Structure (Debt vs Equity)", 'font': {'color': 'black'}}, # FORCE TITLE BLACK
-                    font=dict(color='black'), 
+                    title={'text': "Capital Structure (Debt vs Equity)", 'font': {'color': 'black'}},
+                    font=dict(color='black'),
                     height=300, 
+                    template="plotly_white", # Force White Template
                     paper_bgcolor='rgba(0,0,0,0)', 
                     plot_bgcolor='rgba(0,0,0,0)',
                     legend=dict(font=dict(color='black'))
@@ -307,14 +307,15 @@ def main():
                     y=[row['Revenue'], row['EBIT'], row['PAT']],
                     marker_color=['#2563eb', '#3b82f6', '#008000'],
                     texttemplate='%{y:.2s}', textposition='auto',
-                    textfont=dict(color='black') # FORCE TEXT BLACK
+                    textfont=dict(color='black')
                 )])
                 prof_fig.update_layout(
-                    title={'text': "Profitability Composition", 'font': {'color': 'black'}}, # FORCE TITLE BLACK
-                    font=dict(color='black'), 
-                    xaxis=dict(tickfont=dict(color='black'), title_font=dict(color='black')), # AXES BLACK
+                    title={'text': "Profitability Composition", 'font': {'color': 'black'}},
+                    font=dict(color='black'),
+                    xaxis=dict(tickfont=dict(color='black'), title_font=dict(color='black')),
                     yaxis=dict(tickfont=dict(color='black'), title_font=dict(color='black')),
                     height=300, 
+                    template="plotly_white",
                     paper_bgcolor='rgba(0,0,0,0)', 
                     plot_bgcolor='rgba(0,0,0,0)'
                 )
@@ -341,7 +342,7 @@ def main():
             c7.metric("Debt-to-Equity", f"{row['Debt_Equity']:.2f}x")
             c8.metric("Interest Coverage", f"{row['ICR']:.2f}x")
 
-        # TAB 3: DUPONT (FIXED TEXT VISIBILITY)
+        # TAB 3: DUPONT
         with tabs[2]:
             st.subheader("A. DuPont Decomposition")
             dupont_df = pd.DataFrame({
@@ -353,16 +354,17 @@ def main():
                                 title=f"ROE: {row['ROE']:.1f}% Breakdown", text_auto='.2f',
                                 color_discrete_map={'Efficiency': '#3b82f6', 'Risk': '#f59e0b'})
             fig_dupont.update_layout(
-                title_font_color="black", # FORCE TITLE BLACK
+                title_font_color="black",
                 height=350, 
+                template="plotly_white",
                 paper_bgcolor='rgba(0,0,0,0)', 
                 plot_bgcolor='rgba(0,0,0,0)', 
-                font=dict(color='black'), # FORCE GLOBAL FONT BLACK
+                font=dict(color='black'),
                 xaxis=dict(tickfont=dict(color='black'), title_font=dict(color='black')),
                 yaxis=dict(tickfont=dict(color='black'), title_font=dict(color='black')),
                 legend=dict(font=dict(color='black'))
             )
-            fig_dupont.update_traces(textfont=dict(color='black')) # BAR LABELS BLACK
+            fig_dupont.update_traces(textfont=dict(color='black'))
             st.plotly_chart(fig_dupont, use_container_width=True)
 
             st.divider()
@@ -385,7 +387,7 @@ def main():
                 if row['Beneish_Flag_DSRI'] == 1: st.error("Alert: Receivables growing faster than Revenue.")
                 else: st.success("Pass: Revenue growth consistent with Receivables.")
 
-        # TAB 5: DISTRESS (FIXED GAUGE CUTOFF & VISIBILITY)
+        # TAB 5: DISTRESS
         with tabs[4]:
             st.subheader("Financial Distress Model")
             z = row['Z_Score']
@@ -401,8 +403,8 @@ def main():
                               {'range': [2.9, 5], 'color': "#d4edda"}]
                 }
             ))
-            # INCREASED MARGINS TO PREVENT CUTOFF
             fig_gauge.update_layout(height=350, margin=dict(t=50, b=50, l=30, r=30), 
+                                    template="plotly_white",
                                     paper_bgcolor='rgba(0,0,0,0)', font={'color': 'black'})
             st.plotly_chart(fig_gauge, use_container_width=True)
             
@@ -419,9 +421,9 @@ def main():
             
             if not ews_list: st.info("No active Early Warning Signals detected.")
             else: 
-                for signal in ews_list: st.markdown(f"🔸 {signal}")
+                for signal in ews_list: st.markdown(f"- {signal}")
 
-        # TAB 6: CASH FLOW (FIXED TEXT VISIBILITY)
+        # TAB 6: CASH FLOW
         with tabs[5]:
             st.subheader("Cash Flow Structure")
             cf_df = pd.DataFrame({
@@ -433,19 +435,20 @@ def main():
                             text_auto='.2s')
             
             fig_cf.update_layout(
-                title_font_color="black", # FORCE TITLE BLACK
+                title_font_color="black",
                 height=350, 
+                template="plotly_white",
                 paper_bgcolor='rgba(0,0,0,0)', 
                 plot_bgcolor='rgba(0,0,0,0)', 
-                font=dict(color='black'), # FORCE GLOBAL BLACK
+                font=dict(color='black'),
                 xaxis=dict(tickfont=dict(color='black'), title_font=dict(color='black')),
                 yaxis=dict(tickfont=dict(color='black'), title_font=dict(color='black'))
             )
-            fig_cf.update_traces(textfont=dict(color='black')) # FORCE BAR LABELS BLACK
+            fig_cf.update_traces(textfont=dict(color='black'))
             st.plotly_chart(fig_cf, use_container_width=True)
             st.info(f"**Implied Life Cycle Stage:** {row['Life_Cycle']}")
 
-        # TAB 7: DECISION (FIXED TEXT VISIBILITY)
+        # TAB 7: DECISION
         with tabs[6]:
             verdict, r_profile, color, rec, forensics = generate_formal_memo(row)
             
@@ -458,7 +461,8 @@ def main():
             
             st.subheader("Credit Assessment Note")
             st.markdown(f"""
-            <div style="color: #333;"> <strong>1. Financial Assessment</strong><br>
+            <div style="color: #333;">
+            <strong>1. Financial Assessment</strong><br>
             {rec}<br><br>
             <strong>2. Forensic & Compliance Findings</strong><br>
             {forensics}<br><br>
