@@ -1,6 +1,3 @@
-import os
-
-app_code = """
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -14,8 +11,8 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Professional CSS (Dark Mode FinTech Style)
-st.markdown(\"\"\"
+# Professional CSS
+st.markdown("""
     <style>
     .main { background-color: #0e1117; }
     .stMetric {
@@ -33,58 +30,47 @@ st.markdown(\"\"\"
         font-family: 'Segoe UI', sans-serif;
         margin-bottom: 20px;
     }
-    .risk-high { color: #ff4b4b; font-weight: bold; }
-    .risk-med { color: #ffa700; font-weight: bold; }
-    .risk-low { color: #00c04b; font-weight: bold; }
     </style>
-    \"\"\", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
-# --- 2. DATA LOADING ENGINE (Cached for Speed) ---
+# --- 2. DATA LOADING ENGINE ---
 @st.cache_data
 def load_data():
     try:
-        # Load CSV and handle missing columns gracefully
         df = pd.read_csv("financials_master.csv")
         cols = ['Revenue', 'EBITDA', 'EBIT', 'PAT', 'TotalAssets', 'TotalDebt', 
                 'Equity', 'CurrentAssets', 'CurrentLiabilities', 'CFO', 'Interest', 
                 'CFI', 'CFF']
-        
-        # Ensure all columns exist, fill with 0 if missing
         for c in cols:
             if c not in df.columns: df[c] = 0
             df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0)
-            
         return df
     except FileNotFoundError:
         return pd.DataFrame()
 
-# --- 3. ANALYTICAL ENGINE (All Syllabus Ratios) ---
+# --- 3. ANALYTICAL ENGINE (Reused for Both Modes) ---
 def calculate_metrics(df):
     if df.empty: return df
     
-    # A. LIQUIDITY
+    # Ratios
     df['Current_Ratio'] = df['CurrentAssets'] / df['CurrentLiabilities'].replace(0, 1)
     df['OCF_Ratio'] = df['CFO'] / df['CurrentLiabilities'].replace(0, 1)
-    
-    # B. PROFITABILITY
     df['NPM'] = (df['PAT'] / df['Revenue'].replace(0, 1)) * 100
     df['ROA'] = (df['PAT'] / df['TotalAssets'].replace(0, 1)) * 100
     df['ROE'] = (df['PAT'] / df['Equity'].replace(0, 1)) * 100
-    
-    # C. SOLVENCY
     df['Debt_Equity'] = df['TotalDebt'] / df['Equity'].replace(0, 1)
     df['ICR'] = df['EBIT'] / df['Interest'].replace(0, 1)
     
-    # D. DUPONT INPUTS
+    # DuPont
     df['Dupont_NPM'] = df['PAT'] / df['Revenue'].replace(0, 1)
     df['Asset_Turnover'] = df['Revenue'] / df['TotalAssets'].replace(0, 1)
     df['Fin_Leverage'] = df['TotalAssets'] / df['Equity'].replace(0, 1)
     
-    # E. FORENSIC CHECKS
+    # Forensic
     df['CFO_to_PAT'] = df['CFO'] / df['PAT'].replace(0, 1)
     df['Accruals_Ratio'] = (df['PAT'] - df['CFO']) / df['TotalAssets'].replace(0, 1)
     
-    # F. ALTMAN Z-SCORE (Emerging Market)
+    # Altman Z-Score
     X1 = (df['CurrentAssets'] - df['CurrentLiabilities']) / df['TotalAssets'].replace(0, 1)
     X2 = df['PAT'] / df['TotalAssets'].replace(0, 1)
     X3 = df['EBIT'] / df['TotalAssets'].replace(0, 1)
@@ -92,22 +78,20 @@ def calculate_metrics(df):
     X5 = df['Revenue'] / df['TotalAssets'].replace(0, 1)
     df['Z_Score'] = 3.25 + (6.56*X1) + (3.26*X2) + (6.72*X3) + (1.05*X4)
     
-    # G. PIOTROSKI F-SCORE (Simplified 5-point)
+    # Piotroski F-Score (Simplified)
     df['F1'] = (df['ROA'] > 0).astype(int)
     df['F2'] = (df['CFO'] > 0).astype(int)
     df['F3'] = (df['CFO'] > df['PAT']).astype(int)
-    df['F4'] = (df['Debt_Equity'] <= df.groupby('Company')['Debt_Equity'].shift(-1).fillna(100)).astype(int)
-    df['F5'] = (df['Current_Ratio'] >= df.groupby('Company')['Current_Ratio'].shift(-1).fillna(0)).astype(int)
-    df['F_Score'] = df['F1'] + df['F2'] + df['F3'] + df['F4'] + df['F5']
+    # Note: Shift logic removed for manual single-row entry to avoid errors
+    df['F_Score'] = df['F1'] + df['F2'] + df['F3'] 
     
     return df
 
-# --- 4. AI GENERATOR (Logic-Based) ---
+# --- 4. AI GENERATOR ---
 def generate_ai_credit_note(row, company, year):
     risk_score = 0
     flags = []
     
-    # Scoring Logic
     if row['Z_Score'] < 1.23: 
         risk_score += 3
         flags.append("High Bankruptcy Risk (Z-Score < 1.23)")
@@ -121,174 +105,149 @@ def generate_ai_credit_note(row, company, year):
         risk_score += 2
         flags.append("Liquidity Stress (CR < 1.0)")
 
-    # Decision
     if risk_score >= 4:
-        bucket = "HIGH RISK"
-        action = "⛔ REJECT / SENIOR REVIEW"
-        color = "#ff4b4b" # Red
+        bucket, action, color = "HIGH RISK", "⛔ REJECT / SENIOR REVIEW", "#ff4b4b"
     elif risk_score >= 2:
-        bucket = "MEDIUM RISK"
-        action = "⚠️ CAUTION / STRICT COVENANTS"
-        color = "#ffa700" # Orange
+        bucket, action, color = "MEDIUM RISK", "⚠️ CAUTION / STRICT COVENANTS", "#ffa700"
     else:
-        bucket = "LOW RISK"
-        action = "✅ APPROVE LOAN"
-        color = "#00c04b" # Green
+        bucket, action, color = "LOW RISK", "✅ APPROVE LOAN", "#00c04b"
         
     return bucket, action, color, flags
 
 # --- 5. MAIN UI LAYOUT ---
 def main():
-    # Load & Calc
-    raw_df = load_data()
-    if raw_df.empty:
-        st.error("⚠️ Data missing! Please upload 'financials_master.csv' to the sidebar folder.")
-        st.stop()
-    
-    df = calculate_metrics(raw_df)
-
-    # Sidebar
     st.sidebar.title("🔍 AI Forensic Tool")
-    company = st.sidebar.selectbox("Select Borrower", df['Company'].unique())
-    year = st.sidebar.selectbox("Select FY", sorted(df[df['Company'] == company]['Year'].unique(), reverse=True))
     
-    # Navigation
-    page = st.sidebar.radio("Navigate to:", [
-        "1️⃣ Company Overview",
-        "2️⃣ Financial Analysis", 
-        "3️⃣ DuPont & Quality",
-        "4️⃣ Forensic & Fraud",
-        "5️⃣ Cash Flow & Life Cycle",
-        "6️⃣ Credit Decision (AI)"
-    ])
-    st.sidebar.markdown("---")
-    st.sidebar.info(f"**Active Profile:** {company} ({year})")
-
-    # Get Row Data
-    row = df[(df['Company'] == company) & (df['Year'] == year)].iloc[0]
-
-    # --- PAGES ---
+    # --- MODE SELECTION ---
+    mode = st.sidebar.radio("Data Source:", ["📂 Select from Dataset", "✍️ Manual Data Entry"])
     
-    # PAGE 1: OVERVIEW
-    if page == "1️⃣ Company Overview":
-        st.title(f"🏢 {company}: Executive Snapshot")
-        col1, col2, col3, col4 = st.columns(4)
-        col1.metric("Revenue", f"₹{row['Revenue']:,.0f} Cr")
-        col2.metric("Net Profit", f"₹{row['PAT']:,.0f} Cr")
-        col3.metric("Total Debt", f"₹{row['TotalDebt']:,.0f} Cr")
-        col4.metric("CFO", f"₹{row['CFO']:,.0f} Cr", delta_color="normal")
+    if mode == "📂 Select from Dataset":
+        raw_df = load_data()
+        if raw_df.empty:
+            st.error("Data missing! Please upload 'financials_master.csv'.")
+            st.stop()
         
-        st.markdown("### 📈 Revenue vs Profit Trend")
-        chart_data = df[df['Company'] == company]
-        fig = px.line(chart_data, x='Year', y=['Revenue', 'PAT', 'CFO'], markers=True)
-        st.plotly_chart(fig, use_container_width=True)
+        company = st.sidebar.selectbox("Select Borrower", raw_df['Company'].unique())
+        year = st.sidebar.selectbox("Select FY", sorted(raw_df[raw_df['Company'] == company]['Year'].unique(), reverse=True))
+        row_input = raw_df[(raw_df['Company'] == company) & (raw_df['Year'] == year)].iloc[0]
+        
+    else:
+        # MANUAL ENTRY FORM
+        st.sidebar.markdown("---")
+        st.sidebar.subheader("Enter Financials (Cr)")
+        
+        with st.sidebar.form("manual_input"):
+            company = st.text_input("Company Name", "New Borrower Ltd")
+            year = st.number_input("Financial Year", 2025)
+            
+            st.markdown("### P&L Statement")
+            rev = st.number_input("Revenue", 10000.0)
+            ebitda = st.number_input("EBITDA", 2500.0)
+            ebit = st.number_input("EBIT", 2000.0)
+            pat = st.number_input("Net Profit (PAT)", 1500.0)
+            interest = st.number_input("Interest Expense", 500.0)
+            
+            st.markdown("### Balance Sheet")
+            ta = st.number_input("Total Assets", 15000.0)
+            debt = st.number_input("Total Debt", 5000.0)
+            equity = st.number_input("Total Equity", 8000.0)
+            ca = st.number_input("Current Assets", 6000.0)
+            cl = st.number_input("Current Liabilities", 4000.0)
+            
+            st.markdown("### Cash Flow")
+            cfo = st.number_input("CFO (Operating)", 1200.0)
+            cfi = st.number_input("CFI (Investing)", -500.0)
+            cff = st.number_input("CFF (Financing)", -200.0)
+            
+            submitted = st.form_submit_button("Analyze Manual Data")
+            
+        if submitted:
+            # Create a 1-row DataFrame
+            data = {
+                'Company': [company], 'Year': [year], 'Revenue': [rev], 'EBITDA': [ebitda],
+                'EBIT': [ebit], 'PAT': [pat], 'Interest': [interest], 'TotalAssets': [ta],
+                'TotalDebt': [debt], 'Equity': [equity], 'CurrentAssets': [ca],
+                'CurrentLiabilities': [cl], 'CFO': [cfo], 'CFI': [cfi], 'CFF': [cff]
+            }
+            row_input = pd.DataFrame(data).iloc[0]
+        else:
+            st.info("👈 Enter data in the sidebar and click 'Analyze Manual Data'")
+            st.stop()
 
-    # PAGE 2: RATIOS
-    elif page == "2️⃣ Financial Analysis":
-        st.title("🧮 Financial Statement Analysis")
-        
+    # --- PROCESS DATA ---
+    # Convert single row to DataFrame for calculation engine
+    input_df = pd.DataFrame([row_input])
+    df_calc = calculate_metrics(input_df)
+    row = df_calc.iloc[0]
+
+    # --- DASHBOARD UI ---
+    st.title(f"🏢 {company}: Forensic Credit Report")
+    
+    # Top Metrics
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Revenue", f"₹{row['Revenue']:,.0f}")
+    c2.metric("Net Profit", f"₹{row['PAT']:,.0f}")
+    c3.metric("Total Debt", f"₹{row['TotalDebt']:,.0f}")
+    c4.metric("CFO", f"₹{row['CFO']:,.0f}", delta="Healthy" if row['CFO'] > row['PAT'] else "Weak")
+
+    # Tabs
+    t1, t2, t3, t4 = st.tabs(["📊 Ratios", "🔎 Forensic & Fraud", "🧬 DuPont Analysis", "🤖 AI Decision"])
+    
+    with t1:
         c1, c2 = st.columns(2)
         with c1:
             st.subheader("Liquidity & Solvency")
             st.metric("Current Ratio", f"{row['Current_Ratio']:.2f}x", "Target > 1.0")
             st.metric("Debt-to-Equity", f"{row['Debt_Equity']:.2f}x", "Target < 2.0")
             st.metric("Interest Coverage", f"{row['ICR']:.2f}x", "Target > 3.0")
-            
         with c2:
             st.subheader("Profitability")
             st.metric("Net Profit Margin", f"{row['NPM']:.1f}%")
             st.metric("ROA", f"{row['ROA']:.1f}%")
             st.metric("ROE", f"{row['ROE']:.1f}%")
 
-    # PAGE 3: DUPONT
-    elif page == "3️⃣ DuPont & Quality":
-        st.title("🧬 DuPont & Earnings Quality")
-        
-        # DuPont Chart
+    with t2:
+        st.subheader("Forensic Red Flags")
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown(f"**Altman Z-Score:** {row['Z_Score']:.2f}")
+            fig = go.Figure(go.Indicator(
+                mode = "gauge+number", value = row['Z_Score'],
+                gauge = {'axis': {'range': [None, 5]}, 'bar': {'color': "white"},
+                         'steps': [{'range': [0, 1.23], 'color': "#ff4b4b"}, {'range': [1.23, 2.9], 'color': "#ffa700"}, {'range': [2.9, 5], 'color': "#00c04b"}]}
+            ))
+            st.plotly_chart(fig, use_container_width=True)
+        with c2:
+            st.markdown("**Earnings Quality (CFO vs PAT)**")
+            fig = px.bar(x=['Reported Profit', 'Real Cash Flow'], y=[row['PAT'], row['CFO']], color=['PAT', 'CFO'])
+            st.plotly_chart(fig, use_container_width=True)
+
+    with t3:
+        st.subheader("ROE Decomposition")
         dupont = pd.DataFrame({
             'Driver': ['Net Margin', 'Asset Turnover', 'Leverage', 'ROE'],
             'Value': [row['Dupont_NPM']*100, row['Asset_Turnover'], row['Fin_Leverage'], row['ROE']],
             'Type': ['Input', 'Input', 'Input', 'Output']
         })
-        fig = px.bar(dupont, x='Driver', y='Value', color='Type', text_auto='.2f', title="ROE Decomposition")
+        fig = px.bar(dupont, x='Driver', y='Value', color='Type', text_auto='.2f', title="ROE Breakdown")
         st.plotly_chart(fig, use_container_width=True)
-        
-        st.markdown("---")
-        st.subheader("Earnings Quality Check")
-        c1, c2 = st.columns(2)
-        c1.metric("CFO / PAT Ratio", f"{row['CFO_to_PAT']:.2f}", "Target > 0.8")
-        c2.metric("Accruals Ratio", f"{row['Accruals_Ratio']:.2f}", "Lower is Better")
 
-    # PAGE 4: FORENSIC
-    elif page == "4️⃣ Forensic & Fraud":
-        st.title("🕵️ Forensic Red Flags")
-        
-        # Z-Score Gauge
-        st.subheader("Altman Z-Score (Bankruptcy Risk)")
-        z = row['Z_Score']
-        fig = go.Figure(go.Indicator(
-            mode = "gauge+number", value = z,
-            gauge = {'axis': {'range': [None, 5]}, 
-                     'steps': [{'range': [0, 1.23], 'color': "#ff4b4b"}, 
-                               {'range': [1.23, 2.9], 'color': "#ffa700"},
-                               {'range': [2.9, 5], 'color': "#00c04b"}]}
-        ))
-        st.plotly_chart(fig, use_container_width=True)
-        if company == "Yes Bank": st.info("ℹ️ Note: Z-Score applies differently to Banks.")
-        
-        st.markdown("---")
-        st.subheader("Piotroski F-Score (Strength)")
-        st.metric("F-Score", f"{int(row['F_Score'])} / 5", "Higher is Stronger")
-
-    # PAGE 5: CASH FLOW
-    elif page == "5️⃣ Cash Flow & Life Cycle":
-        st.title("🔄 Cash Flow Analysis")
-        
-        cf_df = pd.DataFrame({
-            'Type': ['Operating', 'Investing', 'Financing'],
-            'Amount': [row['CFO'], row['CFI'], row['CFF']]
-        })
-        fig = px.bar(cf_df, x='Type', y='Amount', color='Amount', title="Cash Flow Mix")
-        st.plotly_chart(fig, use_container_width=True)
-        
-        # Life Cycle Logic
-        cfo, cfi, cff = row['CFO'], row['CFI'], row['CFF']
-        if cfo < 0 and cfi < 0 and cff > 0: stage = "Introduction"
-        elif cfo > 0 and cfi < 0 and cff > 0: stage = "Growth"
-        elif cfo > 0 and cfi < 0 and cff < 0: stage = "Mature"
-        elif cfo < 0: stage = "Decline/Stress"
-        else: stage = "Transition"
-        
-        st.info(f"📍 **Business Life Cycle Stage:** {stage}")
-
-    # PAGE 6: AI DECISION
-    elif page == "6️⃣ Credit Decision (AI)":
+    with t4:
         bucket, action, color, flags = generate_ai_credit_note(row, company, year)
-        
-        st.title("🤖 AI Credit Recommendation")
-        
-        st.markdown(f\"\"\"
+        st.markdown(f"""
         <div class="report-box" style="border-left: 5px solid {color};">
             <h2>{action}</h2>
             <h4>Risk Profile: <span style="color:{color}">{bucket}</span></h4>
             <hr>
-            <p><strong>AI Assessment:</strong> The borrower {company} has been analyzed using forensic algorithms. 
-            Based on FY{year} data, the system recommends the above action.</p>
+            <p><strong>AI Assessment:</strong> Based on the data provided for {company} (FY{year}), the system calculates a Z-Score of {row['Z_Score']:.2f}.</p>
         </div>
-        \"\"\", unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
         
         if flags:
-            st.subheader("🚨 Key Risk Drivers")
-            for f in flags:
-                st.error(f"• {f}")
+            st.subheader("🚨 Risk Drivers")
+            for f in flags: st.error(f"• {f}")
         else:
-            st.success("✅ No major forensic red flags detected.")
+            st.success("✅ No major forensic flags detected.")
 
 if __name__ == "__main__":
     main()
-"""
-
-with open("app.py", "w", encoding='utf-8') as f:
-    f.write(app_code)
-
-print("✅ App successfully created! Ready to launch.")
