@@ -11,43 +11,42 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Screener.in / Modern Fintech CSS (White Theme)
+# Force Light Theme & Screener Styling
 st.markdown("""
     <style>
-    /* Main Background - White */
+    /* Force Light Background for the whole app */
     .stApp {
         background-color: #ffffff;
+        color: #000000;
     }
     
-    /* Sidebar - Light Grey */
+    /* Sidebar styling */
     section[data-testid="stSidebar"] {
         background-color: #f7f9fa;
         border-right: 1px solid #e0e0e0;
     }
     
-    /* Metric Cards - White with Border (Screener Style) */
+    /* Global Text Visibility Fix */
+    p, h1, h2, h3, h4, h5, span, div, label {
+        color: #2c3e50; /* Dark Grey for readability */
+    }
+    
+    /* Metric Cards */
     div[data-testid="stMetric"] {
         background-color: #ffffff;
         padding: 15px;
         border-radius: 8px;
         border: 1px solid #e0e0e0;
         box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        color: #333;
     }
-    
-    /* Text Colors - Dark for readability */
-    h1, h2, h3, h4, h5, p, span, div {
-        color: #2c3e50;
-        font-family: 'Segoe UI', sans-serif;
+    div[data-testid="stMetricLabel"] {
+        color: #666 !important;
     }
-    
-    /* Value Text in Metrics */
     div[data-testid="stMetricValue"] {
-        color: #212529 !important;
-        font-weight: 600;
+        color: #000 !important;
     }
     
-    /* Tabs - Clean Look */
+    /* Tabs */
     .stTabs [data-baseweb="tab-list"] { 
         gap: 20px; 
         border-bottom: 2px solid #f0f0f0; 
@@ -63,23 +62,30 @@ st.markdown("""
     }
     .stTabs [aria-selected="true"] {
         background-color: transparent;
-        color: #008000; /* Green highlight like Screener */
+        color: #008000;
         border-bottom: 3px solid #008000;
     }
 
-    /* Verdict Box - Clean & Professional */
+    /* Verdict Box - Fixed Visibility */
     .verdict-box {
-        background-color: #f8fff9; /* Very light green hint */
+        background-color: #f0fdf4; /* Light Green */
         padding: 25px;
         border: 1px solid #bbf7d0;
         border-radius: 8px;
         margin-bottom: 20px;
+        color: #1f2937; /* Dark Text */
+    }
+    .verdict-title {
+        font-size: 24px;
+        font-weight: bold;
+        color: #166534; /* Darker Green title */
+        margin-bottom: 10px;
     }
     
-    /* Status Colors */
-    .status-pass { color: #008000; font-weight: bold; } /* Screener Green */
-    .status-warn { color: #d97706; font-weight: bold; }
-    .status-fail { color: #dc2626; font-weight: bold; }
+    /* Alerts */
+    .stAlert {
+        color: #000 !important; /* Force alert text black */
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -103,36 +109,33 @@ def load_dataset():
 def calculate_metrics(df):
     if df.empty: return df
     
-    # --- Tab 2: Financial Analysis ---
+    # Financial Analysis
     df['Current_Ratio'] = df['CurrentAssets'] / df['CurrentLiabilities'].replace(0, 1)
     df['OCF_Ratio'] = df['CFO'] / df['CurrentLiabilities'].replace(0, 1)
     df['NPM'] = (df['PAT'] / df['Revenue'].replace(0, 1)) * 100
     df['ROA'] = (df['PAT'] / df['TotalAssets'].replace(0, 1)) * 100
     df['ROE'] = (df['PAT'] / df['Equity'].replace(0, 1)) * 100
     
-    # NEW RATIOS FOR DEPTH
-    # ROCE (Return on Capital Employed) = EBIT / (Total Debt + Equity)
+    # NEW RATIOS
     df['ROCE'] = (df['EBIT'] / (df['TotalDebt'] + df['Equity']).replace(0, 1)) * 100
-    
-    # Debtor Days = (Receivables / Revenue) * 365
     df['Debtor_Days'] = (df['Receivables'] / df['Revenue'].replace(0, 1)) * 365
     
     df['Debt_Equity'] = df['TotalDebt'] / df['Equity'].replace(0, 1)
     df['ICR'] = df['EBIT'] / df['Interest'].replace(0, 1)
     
-    # --- Tab 3: DuPont ---
+    # DuPont
     df['Dupont_NPM'] = df['PAT'] / df['Revenue'].replace(0, 1)
     df['Asset_Turnover'] = df['Revenue'] / df['TotalAssets'].replace(0, 1)
     df['Fin_Leverage'] = df['TotalAssets'] / df['Equity'].replace(0, 1)
     
-    # --- Tab 4: Forensic ---
+    # Forensic
     df['CFO_to_PAT'] = df['CFO'] / df['PAT'].replace(0, 1)
     df['Accruals_Ratio'] = (df['PAT'] - df['CFO']) / df['TotalAssets'].replace(0, 1)
     df['Sales_Growth'] = df['Revenue'].pct_change().fillna(0)
     df['Rec_Growth'] = df['Receivables'].pct_change().fillna(0)
     df['Beneish_Flag_DSRI'] = (df['Rec_Growth'] > (df['Sales_Growth'] * 1.3)).astype(int) 
     
-    # --- Tab 5: Distress ---
+    # Distress
     X1 = (df['CurrentAssets'] - df['CurrentLiabilities']) / df['TotalAssets'].replace(0, 1)
     X2 = df['PAT'] / df['TotalAssets'].replace(0, 1)
     X3 = df['EBIT'] / df['TotalAssets'].replace(0, 1)
@@ -140,12 +143,7 @@ def calculate_metrics(df):
     X5 = df['Revenue'] / df['TotalAssets'].replace(0, 1)
     df['Z_Score'] = 3.25 + (6.56*X1) + (3.26*X2) + (6.72*X3) + (1.05*X4)
     
-    # Early Warning Signals (EWS)
-    df['EWS_Liquidity'] = (df['Current_Ratio'] < 1.0).astype(int)
-    df['EWS_Leverage'] = (df['Debt_Equity'] > 2.0).astype(int)
-    df['EWS_Interest'] = (df['ICR'] < 1.5).astype(int)
-    
-    # --- Tab 6: Life Cycle ---
+    # Life Cycle
     df['CF_Debt_Cov'] = df['CFO'] / df['TotalDebt'].replace(0, 1)
     def get_stage(row):
         cfo, cfi, cff = row['CFO'], row['CFI'], row['CFF']
@@ -156,7 +154,7 @@ def calculate_metrics(df):
         return "Transition"
     df['Life_Cycle'] = df.apply(get_stage, axis=1)
 
-    # --- Credit Score Calculation ---
+    # Score
     def get_score(row):
         score = 100
         if row['Z_Score'] < 1.23: score -= 25
@@ -171,22 +169,20 @@ def calculate_metrics(df):
     
     return df
 
-# --- 4. CREDIT MEMO GENERATOR (Rule-Based) ---
+# --- 4. CREDIT MEMO GENERATOR ---
 def generate_formal_memo(row):
     score = row['Credit_Score']
     
-    # Determine Status
     if score >= 75:
-        verdict, risk_profile, color_hex = "APPROVE", "LOW RISK", "#008000" # Screener Green
+        verdict, risk_profile, color_hex = "APPROVE", "LOW RISK", "#008000"
         rec_text = "The borrower demonstrates strong financial health with robust liquidity and solvency metrics. Recommended for approval."
     elif score >= 50:
-        verdict, risk_profile, color_hex = "REVIEW", "MEDIUM RISK", "#d97706" # Amber
+        verdict, risk_profile, color_hex = "REVIEW", "MEDIUM RISK", "#d97706"
         rec_text = "The borrower shows moderate risk. Financials are stable but require stricter covenants regarding leverage or working capital."
     else:
-        verdict, risk_profile, color_hex = "REJECT", "HIGH RISK", "#dc2626" # Red
+        verdict, risk_profile, color_hex = "REJECT", "HIGH RISK", "#dc2626"
         rec_text = "The borrower exhibits signs of significant financial distress. Lending is not recommended without substantial collateral or guarantees."
 
-    # Forensic Observations
     forensic_notes = []
     if row['Z_Score'] < 1.23: forensic_notes.append("Altman Z-Score indicates potential distress zone.")
     if row['CFO_to_PAT'] < 0.8: forensic_notes.append("Earnings Quality Concern: Operating Cash Flow is significantly lower than Net Profit.")
@@ -194,17 +190,15 @@ def generate_formal_memo(row):
     if row['Debt_Equity'] > 2.5: forensic_notes.append("Leverage Alert: Debt-to-Equity ratio exceeds conservative thresholds.")
     
     if not forensic_notes:
-        forensic_text = "No material forensic red flags detected in the provided financial statements."
+        forensic_text = "No material forensic red flags detected."
     else:
         forensic_text = "\n".join([f"• {note}" for note in forensic_notes])
 
     return verdict, risk_profile, color_hex, rec_text, forensic_text
 
-# --- 5. MAIN APPLICATION UI ---
+# --- 5. MAIN UI ---
 def main():
-    # --- SIDEBAR: ANALYST CONTROL PANEL ---
     st.sidebar.title("Credit Screener")
-    
     mode = st.sidebar.radio("Data Source", ["Select from Dataset", "Manual Data Entry"])
     
     row = None
@@ -215,8 +209,6 @@ def main():
             st.sidebar.error("Master Dataset not found.")
             st.stop()
         
-        # Sidebar Inputs
-        st.sidebar.subheader("Borrower Selection")
         company = st.sidebar.selectbox("Name", raw_df['Company'].unique())
         years = sorted(raw_df[raw_df['Company'] == company]['Year'].unique(), reverse=True)
         year = st.sidebar.selectbox("Financial Year", years)
@@ -226,7 +218,6 @@ def main():
             row = df_proc[(df_proc['Company'] == company) & (df_proc['Year'] == year)].iloc[0]
 
     else:
-        # Manual Entry
         with st.sidebar.form("manual_entry"):
             st.subheader("Borrower Details")
             company_input = st.text_input("Name", "New Applicant")
@@ -261,14 +252,13 @@ def main():
                 df_proc = calculate_metrics(pd.DataFrame(data))
                 row = df_proc.iloc[0]
 
-    # --- MAIN CONTENT AREA ---
     if row is not None:
-        # 1. HEADER
+        # HEADER
         st.markdown(f"## Credit Report — {row['Company']}")
         st.markdown(f"**FY:** {row['Year']} | **Source:** {mode} | **Generated by:** Auto-Screener")
         st.markdown("---")
 
-        # 2. TABS
+        # TABS
         tabs = st.tabs([
             "Overview", "Financial Analysis", "DuPont & Earnings", 
             "Forensic Checks", "Distress & EWS", "Cash Flow", "Verdict"
@@ -284,38 +274,26 @@ def main():
             c4.metric("Op. Cash Flow", f"{row['CFO']:,.0f}")
             c5.metric("Composite Score", f"{int(row['Credit_Score'])}")
             
-            # Simple Risk Banner
             score = row['Credit_Score']
-            
-            # Colors for the banner
             if score > 75:
-                banner_color = "#e6fffa" # Light Green
-                border_color = "#008000"
-                text_status = "LOW RISK"
-                text_color = "#008000"
+                banner_color, border_color, text_status, text_color = "#e6fffa", "#008000", "LOW RISK", "#008000"
             elif score > 50:
-                banner_color = "#fffaf0" # Light Orange
-                border_color = "#d97706"
-                text_status = "MEDIUM RISK"
-                text_color = "#d97706"
+                banner_color, border_color, text_status, text_color = "#fffaf0", "#d97706", "MEDIUM RISK", "#d97706"
             else:
-                banner_color = "#fff5f5" # Light Red
-                border_color = "#dc2626"
-                text_status = "HIGH RISK"
-                text_color = "#dc2626"
+                banner_color, border_color, text_status, text_color = "#fff5f5", "#dc2626", "HIGH RISK", "#dc2626"
             
             st.markdown(f"""
                 <div style="background-color: {banner_color}; padding: 15px; border-radius: 6px; border-left: 5px solid {border_color}; margin-top: 20px;">
                     <h4 style="margin:0; color: {text_color};">Risk Category: {text_status}</h4>
-                    <p style="margin:0; color: #555;">Based on a weighted analysis of solvency, liquidity, and forensic indicators.</p>
+                    <p style="margin:0; color: #333;">Based on a weighted analysis of solvency, liquidity, and forensic indicators.</p>
                 </div>
             """, unsafe_allow_html=True)
 
-        # TAB 2: FINANCIAL ANALYSIS (Expanded with More Ratios)
+        # TAB 2: FINANCIAL ANALYSIS
         with tabs[1]:
             st.subheader("A. Return Ratios")
             c1, c2, c3 = st.columns(3)
-            c1.metric("ROCE %", f"{row['ROCE']:.1f}%", help="EBIT / (Equity + Debt)")
+            c1.metric("ROCE %", f"{row['ROCE']:.1f}%")
             c2.metric("ROE %", f"{row['ROE']:.1f}%")
             c3.metric("ROA %", f"{row['ROA']:.1f}%")
 
@@ -323,7 +301,7 @@ def main():
             st.subheader("B. Liquidity & Efficiency")
             c4, c5, c6 = st.columns(3)
             c4.metric("Current Ratio", f"{row['Current_Ratio']:.2f}x")
-            c5.metric("Debtor Days", f"{row['Debtor_Days']:.0f} Days", help="Time to collect receivables")
+            c5.metric("Debtor Days", f"{row['Debtor_Days']:.0f} Days")
             c6.metric("Asset Turnover", f"{row['Asset_Turnover']:.2f}x")
 
             st.divider()
@@ -332,10 +310,9 @@ def main():
             c7.metric("Debt-to-Equity", f"{row['Debt_Equity']:.2f}x")
             c8.metric("Interest Coverage", f"{row['ICR']:.2f}x")
 
-        # TAB 3: DUPONT & QUALITY
+        # TAB 3: DUPONT (FIXED CHART COLORS)
         with tabs[2]:
             st.subheader("A. DuPont Decomposition (ROE Drivers)")
-            # Visualizing ROE breakdown
             dupont_df = pd.DataFrame({
                 'Component': ['Net Margin', 'Asset Turnover', 'Financial Leverage'],
                 'Contribution': [row['Dupont_NPM']*100, row['Asset_Turnover'], row['Fin_Leverage']],
@@ -344,7 +321,9 @@ def main():
             fig_dupont = px.bar(dupont_df, x='Component', y='Contribution', color='Type', 
                                 title=f"ROE: {row['ROE']:.1f}% Breakdown", text_auto='.2f',
                                 color_discrete_map={'Efficiency': '#3b82f6', 'Risk': '#f59e0b'})
-            fig_dupont.update_layout(height=350, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='#333'))
+            # Force black text for white background
+            fig_dupont.update_layout(height=350, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', 
+                                     font=dict(color='black'))
             st.plotly_chart(fig_dupont, use_container_width=True)
 
             st.divider()
@@ -356,76 +335,53 @@ def main():
         # TAB 4: FORENSIC
         with tabs[3]:
             st.subheader("Forensic Diagnostics")
-            
             col1, col2 = st.columns(2)
-            
             with col1:
                 st.markdown("#### 1. Cash Realization Check")
                 val = row['CFO_to_PAT']
-                if val < 0.8:
-                    st.error(f"Alert: Weak Cash Conversion ({val:.2f}). Paper profits may be high.")
-                else:
-                    st.success(f"Pass: Healthy Cash Conversion ({val:.2f}).")
-            
+                if val < 0.8: st.error(f"Alert: Weak Cash Conversion ({val:.2f}). Paper profits.")
+                else: st.success(f"Pass: Healthy Cash Conversion ({val:.2f}).")
             with col2:
                 st.markdown("#### 2. Revenue Manipulation (Beneish Proxy)")
-                flag = row['Beneish_Flag_DSRI']
-                if flag == 1:
-                    st.error("Alert: Receivables growing significantly faster than Revenue (Channel Stuffing risk).")
-                else:
-                    st.success("Pass: Revenue growth is consistent with Receivables growth.")
+                if row['Beneish_Flag_DSRI'] == 1: st.error("Alert: Receivables growing faster than Revenue.")
+                else: st.success("Pass: Revenue growth consistent with Receivables.")
 
-        # TAB 5: DISTRESS (Gauge Chart Restored!)
+        # TAB 5: DISTRESS (FIXED GAUGE VISIBILITY)
         with tabs[4]:
             st.subheader("Financial Distress Model")
             z = row['Z_Score']
-            
-            # SEMI-CIRCULAR GAUGE CHART
             fig_gauge = go.Figure(go.Indicator(
-                mode = "gauge+number",
-                value = z,
-                title = {'text': "Altman Z-Score"},
+                mode = "gauge+number", value = z,
+                title = {'text': "Altman Z-Score", 'font': {'color': 'black'}}, # Force Title Black
+                number = {'font': {'color': 'black'}}, # Force Number Black
                 gauge = {
-                    'axis': {'range': [None, 5]},
+                    'axis': {'range': [None, 5], 'tickfont': {'color': 'black'}}, # Force Ticks Black
                     'bar': {'color': "black"},
-                    'steps': [
-                        {'range': [0, 1.23], 'color': "#ffcccb"}, # Red
-                        {'range': [1.23, 2.9], 'color': "#fff4cc"}, # Yellow
-                        {'range': [2.9, 5], 'color': "#d4edda"} # Green
-                    ],
-                    'threshold': {
-                        'line': {'color': "red", 'width': 4},
-                        'thickness': 0.75,
-                        'value': z
-                    }
+                    'steps': [{'range': [0, 1.23], 'color': "#ffcccb"}, 
+                              {'range': [1.23, 2.9], 'color': "#fff4cc"}, 
+                              {'range': [2.9, 5], 'color': "#d4edda"}]
                 }
             ))
-            fig_gauge.update_layout(height=300, margin=dict(t=30,b=10,l=20,r=20), paper_bgcolor='rgba(0,0,0,0)')
+            fig_gauge.update_layout(height=300, margin=dict(t=30,b=10,l=20,r=20), 
+                                    paper_bgcolor='rgba(0,0,0,0)', font={'color': 'black'})
             st.plotly_chart(fig_gauge, use_container_width=True)
             
-            if z > 2.9:
-                st.success("Zone: SAFE (> 2.9) - Low Bankruptcy Probability")
-            elif z > 1.23:
-                st.warning("Zone: GREY (1.23 - 2.9) - Monitor Closely")
-            else:
-                st.error("Zone: DISTRESS (< 1.23) - High Bankruptcy Risk")
+            if z > 2.9: st.success("Zone: SAFE (> 2.9) - Low Bankruptcy Probability")
+            elif z > 1.23: st.warning("Zone: GREY (1.23 - 2.9) - Monitor Closely")
+            else: st.error("Zone: DISTRESS (< 1.23) - High Bankruptcy Risk")
 
             st.divider()
             st.subheader("Early Warning Signals (EWS)")
-            
             ews_list = []
             if row['Current_Ratio'] < 1.0: ews_list.append("Liquidity Stress: Current Ratio < 1.0")
             if row['Debt_Equity'] > 2.0: ews_list.append("Leverage Warning: D/E > 2.0")
             if row['ICR'] < 1.5: ews_list.append("Solvency Warning: Interest Coverage < 1.5")
-            if row['CFO'] < 0: ews_list.append("Cash Burn: Negative Operating Cash Flow")
             
-            if not ews_list:
-                st.info("No active Early Warning Signals detected.")
-            else:
-                for signal in ews_list:
-                    st.markdown(f"🔸 {signal}")
+            if not ews_list: st.info("No active Early Warning Signals detected.")
+            else: 
+                for signal in ews_list: st.markdown(f"🔸 {signal}")
 
-        # TAB 6: CASH FLOW
+        # TAB 6: CASH FLOW (FIXED TEXT COLOR)
         with tabs[5]:
             st.subheader("Cash Flow Structure")
             cf_df = pd.DataFrame({
@@ -434,39 +390,37 @@ def main():
             })
             fig_cf = px.bar(cf_df, x='Activity', y='Amount', color='Amount', 
                             title="Cash Flow Waterfall", color_continuous_scale='Bluered_r')
-            fig_cf.update_layout(height=350, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='#333'))
+            # Force black text for white background
+            fig_cf.update_layout(height=350, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', 
+                                 font=dict(color='black'))
             st.plotly_chart(fig_cf, use_container_width=True)
-            
             st.info(f"**Implied Life Cycle Stage:** {row['Life_Cycle']}")
 
-        # TAB 7: DECISION
+        # TAB 7: DECISION (FIXED VISIBILITY)
         with tabs[6]:
-            # Generate the content
             verdict, r_profile, color, rec, forensics = generate_formal_memo(row)
             
-            # 1. Verdict Box
+            # 1. Verdict Box (Light Green Background, Dark Text)
             st.markdown(f"""
-                <div class="verdict-box" style="border-left: 5px solid {color}; background-color: #ffffff;">
-                    <div style="font-size: 24px; font-weight: bold; color: {color}; margin-bottom: 10px;">{verdict}</div>
-                    <div style="font-size: 16px; color: #555;">Risk Profile: <strong>{r_profile}</strong> | Score: {int(row['Credit_Score'])}/100</div>
+                <div class="verdict-box">
+                    <div class="verdict-title">{verdict}</div>
+                    <div style="font-size: 16px; color: #333;">Risk Profile: <strong>{r_profile}</strong> | Score: {int(row['Credit_Score'])}/100</div>
                 </div>
             """, unsafe_allow_html=True)
             
-            # 2. Structured Note
+            # 2. Structured Note (Force Text Color)
             st.subheader("Credit Assessment Note")
             st.markdown(f"""
-            **1. Financial Assessment**
-            {rec}
-            
-            **2. Forensic & Compliance Findings**
-            {forensics}
-            
-            **3. Final Recommendation**
-            Based on the quantitative models and forensic ratios, the system recommends a decision to **{verdict}**. 
-            This recommendation is automated based on the input financial data and should be verified by a senior credit officer.
-            """)
-            
-            st.caption("Generated by Credit Screener Tool v2.0")
+            <div style="color: #333;">
+            <strong>1. Financial Assessment</strong><br>
+            {rec}<br><br>
+            <strong>2. Forensic & Compliance Findings</strong><br>
+            {forensics}<br><br>
+            <strong>3. Final Recommendation</strong><br>
+            Based on the quantitative models and forensic ratios, the system recommends a decision to <strong>{verdict}</strong>.
+            This recommendation is automated based on the input financial data.
+            </div>
+            """, unsafe_allow_html=True)
 
     elif mode == "Select from Dataset" and row is None:
         st.info("👈 Select a company from the sidebar to generate a report.")
