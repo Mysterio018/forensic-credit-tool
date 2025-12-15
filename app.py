@@ -26,16 +26,44 @@ st.markdown("""
         border-right: 1px solid #e9ecef;
     }
     
-    /* --- SIDEBAR DROPDOWN FIX --- */
-    /* Forces the text inside the selectbox to be WHITE so it's visible on the black background */
-    div[data-testid="stSelectbox"] div[data-testid="stMarkdownContainer"] p {
-        color: white !important;
+    /* --- SIDEBAR FIXES (REQUESTED) --- */
+    
+    /* 1. Labels (Name, Financial Year) - Make Dark & Bold */
+    div[data-testid="stSidebar"] label {
+        color: #000000 !important;
+        font-weight: 700 !important;
+        font-size: 14px !important;
     }
-    /* Ensures the dropdown box itself remains dark/black */
+    
+    /* 2. Dropdown Box - Make Light Green Background */
     div[data-testid="stSelectbox"] > div > div {
-        background-color: #0e1117 !important;
-        color: white !important;
-        border: 1px solid #444;
+        background-color: #e6fffa !important; /* Light Green */
+        border: 1px solid #008000 !important; /* Green Border */
+        color: #000000 !important;
+    }
+    
+    /* 3. Text Inside Dropdown - Make Black */
+    div[data-testid="stSelectbox"] div[data-testid="stMarkdownContainer"] p {
+        color: #000000 !important;
+        font-weight: 500;
+    }
+    
+    /* 4. Dropdown Arrow - Make Black */
+    div[data-testid="stSelectbox"] svg {
+        fill: #000000 !important;
+    }
+    
+    /* 5. Dropdown Options Menu (When clicked) */
+    div[role="listbox"] {
+        background-color: #ffffff !important;
+    }
+    div[role="listbox"] div {
+        color: #000000 !important;
+    }
+    /* ------------------------------ */
+
+    input {
+        color: #000000 !important; /* Text inside inputs */
     }
     
     /* Metric Cards */
@@ -200,7 +228,7 @@ def generate_formal_memo(row):
 
 # --- 5. MAIN UI ---
 def main():
-    st.sidebar.title("Credit Assessment Tool")
+    st.sidebar.title("AI-Assisted Forensic Credit Assessment Tool")
     mode = st.sidebar.radio("Data Source", ["Select from Dataset", "Manual Data Entry"])
     
     row = None
