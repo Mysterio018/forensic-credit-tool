@@ -5,14 +5,14 @@ import plotly.graph_objects as go
 import numpy as np
 import google.generativeai as genai
 
-# --- 1. CONFIGURATION & BANK-GRADE STYLING ---
+# --- 1. APP CONFIGURATION & STYLING ---
 st.set_page_config(
-    page_title="AI Forensic Credit Assessment Tool",
+    page_title="AI-Based Forensic Credit Assessment Tool",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Professional CSS
+# Custom CSS
 st.markdown("""
     <style>
     .main { background-color: #0e1117; }
@@ -32,10 +32,7 @@ st.markdown("""
         font-family: 'Courier New', monospace;
         margin-bottom: 20px;
     }
-    .risk-high { color: #ff4b4b; font-weight: bold; }
-    .risk-med { color: #ffa700; font-weight: bold; }
-    .risk-low { color: #00c04b; font-weight: bold; }
-    .stTabs [data-baseweb="tab-list"] { gap: 10px; }
+    .stTabs [data-baseweb="tab-list"] { gap: 8px; }
     .stTabs [data-baseweb="tab"] {
         height: 50px;
         white-space: pre-wrap;
@@ -51,7 +48,14 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. DATA LOADING ENGINE ---
+# --- 2. SECURE AI CONFIGURATION ---
+# Try to get the key from Streamlit Secrets (Backend)
+try:
+    API_KEY = st.secrets["GEMINI_API_KEY"]
+except:
+    API_KEY = None  # If not found, AI features will be disabled
+
+# --- 3. DATA LOADING ENGINE ---
 @st.cache_data
 def load_dataset():
     try:
@@ -66,36 +70,32 @@ def load_dataset():
     except FileNotFoundError:
         return pd.DataFrame()
 
-# --- 3. UNIFIED CALCULATION ENGINE ---
+# --- 4. UNIFIED ANALYSIS ENGINE ---
 def calculate_metrics(df):
     if df.empty: return df
     
-    # A. Liquidity
+    # Ratios
     df['Current_Ratio'] = df['CurrentAssets'] / df['CurrentLiabilities'].replace(0, 1)
     df['OCF_Ratio'] = df['CFO'] / df['CurrentLiabilities'].replace(0, 1)
-    
-    # B. Profitability
     df['NPM'] = (df['PAT'] / df['Revenue'].replace(0, 1)) * 100
     df['ROA'] = (df['PAT'] / df['TotalAssets'].replace(0, 1)) * 100
     df['ROE'] = (df['PAT'] / df['Equity'].replace(0, 1)) * 100
-    
-    # C. Solvency
     df['Debt_Equity'] = df['TotalDebt'] / df['Equity'].replace(0, 1)
     df['ICR'] = df['EBIT'] / df['Interest'].replace(0, 1)
     
-    # D. DuPont
+    # DuPont
     df['Dupont_NPM'] = df['PAT'] / df['Revenue'].replace(0, 1)
     df['Asset_Turnover'] = df['Revenue'] / df['TotalAssets'].replace(0, 1)
     df['Fin_Leverage'] = df['TotalAssets'] / df['Equity'].replace(0, 1)
     
-    # E. Forensic
+    # Forensic
     df['CFO_to_PAT'] = df['CFO'] / df['PAT'].replace(0, 1)
     df['Accruals_Ratio'] = (df['PAT'] - df['CFO']) / df['TotalAssets'].replace(0, 1)
     df['Sales_Growth'] = df['Revenue'].pct_change().fillna(0)
     df['Rec_Growth'] = df['Receivables'].pct_change().fillna(0)
-    df['Beneish_Flag_DSRI'] = (df['Rec_Growth'] > (df['Sales_Growth'] * 1.3)).astype(int) 
+    df['Beneish_Flag'] = (df['Rec_Growth'] > (df['Sales_Growth'] * 1.3)).astype(int) 
     
-    # F. Z-Score
+    # Z-Score
     X1 = (df['CurrentAssets'] - df['CurrentLiabilities']) / df['TotalAssets'].replace(0, 1)
     X2 = df['PAT'] / df['TotalAssets'].replace(0, 1)
     X3 = df['EBIT'] / df['TotalAssets'].replace(0, 1)
@@ -103,7 +103,8 @@ def calculate_metrics(df):
     X5 = df['Revenue'] / df['TotalAssets'].replace(0, 1)
     df['Z_Score'] = 3.25 + (6.56*X1) + (3.26*X2) + (6.72*X3) + (1.05*X4)
     
-    # G. Life Cycle
+    # Life Cycle
+    df['CF_Debt_Cov'] = df['CFO'] / df['TotalDebt'].replace(0, 1)
     def get_stage(row):
         cfo, cfi, cff = row['CFO'], row['CFI'], row['CFF']
         if cfo < 0 and cfi < 0 and cff > 0: return "Introduction"
@@ -113,8 +114,8 @@ def calculate_metrics(df):
         return "Transition"
     df['Life_Cycle'] = df.apply(get_stage, axis=1)
 
-    # H. Composite Score
-    def get_credit_score(row):
+    # Risk Score
+    def get_score(row):
         score = 100
         if row['Z_Score'] < 1.23: score -= 25
         elif row['Z_Score'] < 2.9: score -= 10
@@ -122,86 +123,94 @@ def calculate_metrics(df):
         if row['Debt_Equity'] > 2.0: score -= 15
         if row['Current_Ratio'] < 1.0: score -= 10
         if row['ICR'] < 1.5: score -= 10
-        if row['Beneish_Flag_DSRI'] == 1: score -= 10
+        if row['Beneish_Flag'] == 1: score -= 10
         return max(0, score)
-    df['Credit_Score'] = df.apply(get_credit_score, axis=1)
+    df['Credit_Score'] = df.apply(get_score, axis=1)
+    
     return df
 
-# --- 4. MEMO GENERATORS ---
-
-def get_rule_based_memo(row, company):
+# --- 5. AI GENERATORS ---
+def get_rule_based_summary(row, company):
     score = row['Credit_Score']
-    if score >= 75: bucket, color, action = "LOW RISK", "#00c04b", "✅ APPROVE for Lending"
-    elif score >= 50: bucket, color, action = "MEDIUM RISK", "#ffa700", "⚠️ APPROVE WITH CAUTION"
-    else: bucket, color, action = "HIGH RISK", "#ff4b4b", "⛔ REJECT / SENIOR REVIEW"
-        
+    if score >= 75: bucket, action, color = "LOW RISK", "✅ APPROVE", "#00c04b"
+    elif score >= 50: bucket, action, color = "MEDIUM RISK", "⚠️ CAUTION", "#ffa700"
+    else: bucket, action, color = "HIGH RISK", "⛔ REJECT", "#ff4b4b"
+    
     flags = []
-    if row['Z_Score'] < 1.23: flags.append(f"High Bankruptcy Risk (Z: {row['Z_Score']:.2f})")
-    if row['CFO_to_PAT'] < 0.8: flags.append("Weak Earnings Quality (Paper Profits detected)")
-    if row['Debt_Equity'] > 2.0: flags.append(f"High Leverage (D/E: {row['Debt_Equity']:.2f})")
+    if row['Z_Score'] < 1.23: flags.append(f"High Distress Risk (Z: {row['Z_Score']:.2f})")
+    if row['CFO_to_PAT'] < 0.8: flags.append("Poor Earnings Quality")
+    if row['Beneish_Flag'] == 1: flags.append("Aggressive Revenue Recognition")
     
-    flag_text = "\n".join([f"- {f}" for f in flags]) if flags else "- No major forensic red flags detected."
+    flag_text = "\n".join([f"- {f}" for f in flags]) if flags else "- No critical forensic red flags."
     
-    # NOTE: The triple quotes below are clean (no backslashes)
-    summary = f"""
-    **Analysis Mode:** ⚙️ Standard Algorithm (Rule-Based)
+    return f"""
+    **Analysis Mode:** ⚙️ Standard Rules
     
-    **1. Credit Assessment:**
-    The borrower **{company}** falls into the **{bucket}** category (Score: {int(score)}/100).
+    **1. Risk Assessment**
+    Score: {int(score)}/100 ({bucket})
     
-    **2. Forensic Findings:**
+    **2. Forensic Findings**
     {flag_text}
     
-    **3. Recommendation:**
+    **3. Recommendation**
     {action} based on quantitative thresholds.
-    """
-    return bucket, action, summary, color
+    """, color
 
-def get_gemini_memo(row, company, api_key):
+def get_gemini_summary(row, company):
+    if not API_KEY:
+        return get_rule_based_summary(row, company)
+
     try:
-        genai.configure(api_key=api_key)
+        genai.configure(api_key=API_KEY)
         model = genai.GenerativeModel('gemini-pro')
         
-        # Clean prompt with no backslashes
         prompt = f"""
-        Act as a senior credit underwriter. Write a formal credit memo for **{company}** based on:
-        - Revenue: {row['Revenue']} | Net Profit: {row['PAT']} | CFO: {row['CFO']}
-        - Z-Score: {row['Z_Score']:.2f} | Debt/Equity: {row['Debt_Equity']:.2f}
+        Act as a senior credit risk officer. Write a formal credit memo for **{company}**.
         
-        Task:
-        1. Determine Risk Profile.
-        2. Identify top strengths and risks.
-        3. Comment on Earnings Quality.
-        4. Give a final recommendation.
+        **Financial Data:**
+        - Revenue: {row['Revenue']} | Net Profit: {row['PAT']} | CFO: {row['CFO']}
+        - Debt: {row['TotalDebt']} | Equity: {row['Equity']}
+        
+        **Forensic Indicators:**
+        - Z-Score: {row['Z_Score']:.2f}
+        - Earnings Quality (CFO/PAT): {row['CFO_to_PAT']:.2f}
+        - Beneish Flag: {'Detected' if row['Beneish_Flag']==1 else 'None'}
+        - Life Cycle Stage: {row['Life_Cycle']}
+        
+        **Task:**
+        1. Classify Risk (Low/Medium/High).
+        2. Analyze Strengths vs Risks.
+        3. Provide a Forensic Verdict.
+        4. Final Recommendation (Approve/Reject).
         """
         response = model.generate_content(prompt)
-        return "AI ANALYZED", "🤖 SEE MEMO BELOW", f"**Analysis Mode:** 🧠 Live AI (Gemini Pro)\n\n{response.text}", "#4e8cff"
-        
+        return f"**Analysis Mode:** 🧠 Live AI (Gemini)\n\n{response.text}", "#4e8cff"
     except Exception as e:
-        return "ERROR", "API ERROR", f"⚠️ API Failed: {str(e)}\nUsing Rule-Based Logic instead.", "#ff4b4b"
+        return f"⚠️ AI Error: {str(e)}\n\n(Falling back to rules...)", "#ff4b4b"
 
-# --- 5. MAIN UI ---
+# --- 6. MAIN UI ---
 def main():
-    st.sidebar.title("🏦 Credit Underwriter")
+    st.sidebar.title("🏦 Forensic Credit Tool")
     
-    mode = st.sidebar.radio("Data Source:", ["📂 Select from Dataset", "✍️ Manual Data Entry"])
+    mode = st.sidebar.radio("Input Mode:", ["📂 Dataset Mode", "✍️ Manual Calculator"])
     
-    with st.sidebar.expander("🤖 AI Configuration"):
-        api_key = st.text_input("Gemini API Key (Optional)", type="password")
-
     st.sidebar.markdown("---")
-    
+    if API_KEY:
+        st.sidebar.success("✅ AI Engine Connected")
+    else:
+        st.sidebar.warning("⚠️ No API Key Found (Using Rules)")
+
     row = None
     
-    if mode == "📂 Select from Dataset":
+    if mode == "📂 Dataset Mode":
         raw_df = load_dataset()
         if raw_df.empty:
-            st.error("Data missing! Please upload 'financials_master.csv'.")
+            st.error("⚠️ Data missing. Upload 'financials_master.csv' to GitHub.")
             st.stop()
         
-        company = st.sidebar.selectbox("Select Borrower", raw_df['Company'].unique())
+        company = st.sidebar.selectbox("Borrower", raw_df['Company'].unique())
         years = sorted(raw_df[raw_df['Company'] == company]['Year'].unique(), reverse=True)
-        year = st.sidebar.selectbox("Select FY", years)
+        year = st.sidebar.selectbox("FY", years)
         
         if st.sidebar.button("Run Forensic Analysis"):
             df_proc = calculate_metrics(raw_df)
@@ -209,8 +218,8 @@ def main():
             
     else:
         with st.sidebar.form("manual"):
-            st.subheader("Enter Financials")
-            company_input = st.text_input("Company", "New Borrower Ltd")
+            st.subheader("Financial Input")
+            company_input = st.text_input("Company", "New Entity")
             rev = st.number_input("Revenue", 10000.0)
             pat = st.number_input("PAT", 1500.0)
             cfo = st.number_input("CFO", 1200.0)
@@ -228,63 +237,91 @@ def main():
                     'Company': [company_input], 'Year': [2025], 'Revenue': [rev], 'PAT': [pat],
                     'CFO': [cfo], 'TotalDebt': [debt], 'Equity': [equity], 'CurrentAssets': [ca],
                     'CurrentLiabilities': [cl], 'EBIT': [ebit], 'Interest': [interest],
-                    'TotalAssets': [ta], 'Receivables': [rec], 'EBITDA': [ebit+500], 'CFI': [-500], 'CFF': [-200], 'Capex': [-300]
+                    'TotalAssets': [ta], 'Receivables': [rec], 'CFI': [-500], 'CFF': [-200]
                 }
                 df_proc = calculate_metrics(pd.DataFrame(data))
                 row = df_proc.iloc[0]
 
     if row is not None:
-        st.title(f"🏢 Credit Report: {row['Company']}")
+        st.title(f"🔍 Credit Report: {row['Company']}")
         
-        tabs = st.tabs(["1️⃣ Overview", "2️⃣ Financials", "3️⃣ DuPont", "4️⃣ Forensic", "5️⃣ Distress", "6️⃣ Cash Flow", "7️⃣ AI Decision"])
+        tabs = st.tabs([
+            "1️⃣ Overview", "2️⃣ Financials", "3️⃣ DuPont", 
+            "4️⃣ Forensic", "5️⃣ Distress", "6️⃣ Cash Flow", "7️⃣ AI Decision"
+        ])
         
+        # TAB 1: OVERVIEW
         with tabs[0]:
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("Revenue", f"₹{row['Revenue']:,.0f}")
             c2.metric("Net Profit", f"₹{row['PAT']:,.0f}")
-            c3.metric("Total Debt", f"₹{row['TotalDebt']:,.0f}")
+            c3.metric("Debt", f"₹{row['TotalDebt']:,.0f}")
             c4.metric("Risk Score", f"{int(row['Credit_Score'])}", delta_color="off")
             st.markdown("---")
             score = row['Credit_Score']
-            b_disp = "LOW RISK" if score > 75 else "MEDIUM" if score > 50 else "HIGH"
-            st.info(f"**Calculated Risk Category:** {b_disp}")
+            bucket = "LOW RISK" if score > 75 else "MEDIUM" if score > 50 else "HIGH"
+            st.info(f"**Calculated Risk Bucket:** {bucket}")
 
+        # TAB 2: FINANCIALS
         with tabs[1]:
-            st.subheader("Liquidity & Profitability")
+            st.subheader("Core Ratios")
             c1, c2, c3 = st.columns(3)
             c1.metric("Current Ratio", f"{row['Current_Ratio']:.2f}x")
             c2.metric("Debt/Equity", f"{row['Debt_Equity']:.2f}x")
             c3.metric("ROE", f"{row['ROE']:.1f}%")
 
+        # TAB 3: DUPONT
         with tabs[2]:
-            st.subheader("DuPont Analysis")
-            st.bar_chart(pd.DataFrame({'Val': [row['Dupont_NPM']*100, row['Asset_Turnover'], row['Fin_Leverage'], row['ROE']]}, index=['Margin', 'Turnover', 'Leverage', 'ROE']))
+            st.subheader("DuPont Decomposition")
+            d_data = pd.DataFrame({
+                'Driver': ['Net Margin', 'Asset Turnover', 'Leverage', 'ROE'],
+                'Value': [row['Dupont_NPM']*100, row['Asset_Turnover'], row['Fin_Leverage'], row['ROE']]
+            })
+            st.bar_chart(d_data.set_index('Driver'))
+            st.metric("Accruals Ratio", f"{row['Accruals_Ratio']:.2f}")
 
+        # TAB 4: FORENSIC
         with tabs[3]:
-            st.subheader("Forensic Checks")
+            st.subheader("Manipulation Checks")
             c1, c2 = st.columns(2)
-            c1.success("✅ Cash Flow OK") if row['CFO'] > row['PAT'] else c1.error("❌ Weak Cash Flow")
-            c2.success("✅ Revenue OK") if row['Beneish_Flag_DSRI'] == 0 else c2.error("❌ High Receivables")
+            c1.metric("CFO / PAT", f"{row['CFO_to_PAT']:.2f}")
+            if row['CFO'] < row['PAT']: c1.error("❌ Weak Cash Conv.")
+            else: c1.success("✅ Cash Backed")
+            
+            c2.metric("Beneish Proxy Flag", "Detected" if row['Beneish_Flag']==1 else "None")
+            if row['Beneish_Flag']==1: c2.error("❌ Receivables > Sales Growth")
+            else: c2.success("✅ Growth Aligned")
 
+        # TAB 5: DISTRESS
         with tabs[4]:
             st.metric("Altman Z-Score", f"{row['Z_Score']:.2f}")
             st.progress(min(max(row['Z_Score']/5, 0), 1))
-
-        with tabs[5]:
-            st.info(f"Stage: {row['Life_Cycle']}")
-            st.bar_chart(pd.DataFrame({'Flow': [row['CFO'], row['CFI'], row['CFF']]}, index=['Ops', 'Inv', 'Fin']))
-
-        with tabs[6]:
-            st.subheader("🤖 Smart Credit Decision")
-            if api_key:
-                bucket, action, summary, color = get_gemini_memo(row, row['Company'], api_key)
-            else:
-                bucket, action, summary, color = get_rule_based_memo(row, row['Company'])
             
-            st.markdown(f"""<div class="report-box" style="border-left: 5px solid {color};">
-                <h2>{action}</h2>
-                <pre style="white-space: pre-wrap; font-family: inherit;">{summary}</pre>
-            </div>""", unsafe_allow_html=True)
+            st.subheader("Early Warning Signals")
+            e1, e2 = st.columns(2)
+            e1.metric("Liquidity Trend", "Weak" if row['Current_Ratio']<1 else "Stable")
+            e2.metric("Interest Cover", "Stressed" if row['ICR']<1.5 else "Good")
+
+        # TAB 6: CASH FLOW
+        with tabs[5]:
+            st.bar_chart(pd.DataFrame({'Flow': [row['CFO'], row['CFI'], row['CFF']]}, index=['Ops', 'Inv', 'Fin']))
+            st.info(f"📍 **Business Life-Cycle:** {row['Life_Cycle']}")
+            st.metric("Debt Service Coverage", f"{row['CF_Debt_Cov']:.2f}")
+
+        # TAB 7: AI DECISION
+        with tabs[6]:
+            st.subheader("🤖 AI-Assisted Credit Note")
+            
+            if API_KEY:
+                summary, color = get_gemini_summary(row, row['Company'])
+            else:
+                summary, color = get_rule_based_summary(row, row['Company'])
+            
+            st.markdown(f"""
+            <div class="report-box" style="border-left: 5px solid {color};">
+                <pre style="white-space: pre-wrap; font-family: inherit; color: white;">{summary}</pre>
+            </div>
+            """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
