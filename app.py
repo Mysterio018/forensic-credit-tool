@@ -159,9 +159,9 @@ def generate_credit_memo(row, company):
     if row['Debt_Equity'] > 2.0: flags.append(f"High Leverage (D/E: {row['Debt_Equity']:.2f})")
     if row['Current_Ratio'] < 1.0: flags.append("Liquidity Stress (Current Ratio < 1.0)")
     
-    flag_text = "\\n".join([f"- {f}" for f in flags]) if flags else "- No major forensic red flags detected."
+    flag_text = "\n".join([f"- {f}" for f in flags]) if flags else "- No major forensic red flags detected."
     
-    summary = f\"\"\"
+    summary = f"""
     **Borrower:** {company}
     **Composite Score:** {int(score)}/100
     
@@ -173,7 +173,7 @@ def generate_credit_memo(row, company):
     
     **3. Recommendation:**
     {action}
-    \"\"\"
+    """
     return bucket, action, summary, color
 
 # --- 5. MAIN UI LAYOUT ---
