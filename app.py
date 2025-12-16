@@ -30,94 +30,84 @@ st.markdown("""
     }
     
     /* =============================================
-       SIDEBAR WIDGET STYLING (Dark Mode Inputs)
+       SIDEBAR WIDGET STYLING - UNIFIED DARK INPUTS
        ============================================= */
 
-    /* 1. SIDEBAR LABELS */
+    /* 1. SIDEBAR LABELS (The text "Name", "Revenue" above the boxes) */
     div[data-testid="stSidebar"] label {
-        color: #212529 !important; /* Dark grey text for labels outside boxes */
-        font-weight: 600 !important;
+        color: #212529 !important; /* Dark Grey text to stand out on light sidebar */
+        font-weight: 700 !important;
         font-size: 14px !important;
     }
 
-    /* 2. SELECTBOX (Dropdowns) -> Dark background, White text */
-    /* The main box */
+    /* 2. SELECTBOX (THE DROPDOWN) - FIXING VISIBILITY HERE */
+    
+    /* The Closed Box Container */
     div[data-testid="stSelectbox"] > div > div {
-        background-color: #262730 !important; /* Dark background */
-        border: 1px solid #555 !important;
-        color: #ffffff !important; /* White text */
+        background-color: #262730 !important; /* Dark Background */
+        border: 1px solid #444 !important;
+        color: #ffffff !important; /* White Text */
     }
-    /* The text inside the box */
+    
+    /* The Text displayed INSIDE the closed box (e.g., "Infosys") */
     div[data-testid="stSelectbox"] div[data-testid="stMarkdownContainer"] p {
-        color: #ffffff !important; 
+        color: #ffffff !important; /* FORCE WHITE TEXT */
     }
-    /* The arrow icon */
+    
+    /* The Arrow Icon */
     div[data-testid="stSelectbox"] svg {
-        fill: #ffffff !important; 
+        fill: #ffffff !important; /* White Arrow */
     }
 
-    /* 3. TEXT INPUT & NUMBER INPUTS (Manual Entry) -> Dark background, White text */
-    /* Target the outer container of the input */
+    /* 3. DROPDOWN MENU (The list that pops open) */
+    div[role="listbox"] {
+        background-color: #262730 !important; /* Dark Background */
+        border: 1px solid #444 !important;
+    }
+    div[role="option"] {
+        background-color: #262730 !important;
+        color: #ffffff !important; /* White Text Options */
+    }
+    /* Hover state in the list */
+    div[role="option"]:hover, div[role="option"][aria-selected="true"] {
+        background-color: #4a4d5a !important;
+        color: #ffffff !important;
+    }
+
+    /* 4. MANUAL ENTRY INPUTS (Text & Number) */
     div[data-testid="stTextInput"] > div > div,
     div[data-testid="stNumberInput"] > div > div {
-        background-color: #262730 !important; /* Dark background */
-        border: 1px solid #555 !important;
-        color: #ffffff !important; /* White text */
+        background-color: #262730 !important;
+        border: 1px solid #444 !important;
+        color: #ffffff !important;
     }
-    /* Target the input text itself */
     div[data-testid="stTextInput"] input,
     div[data-testid="stNumberInput"] input {
         color: #ffffff !important;
         -webkit-text-fill-color: #ffffff !important;
-        caret-color: #ffffff !important; /* White cursor */
+        caret-color: #ffffff !important;
     }
-    /* Fix +/- buttons in NumberInput so they are visible */
+    /* +/- Buttons */
     div[data-testid="stNumberInput"] button {
         color: #ffffff !important;
-        background-color: transparent !important;
-        border: none !important;
     }
-    /* Hover effect for +/- buttons */
     div[data-testid="stNumberInput"] button:hover {
-        background-color: #3e404a !important;
+        background-color: #4a4d5a !important;
     }
 
-    /* 4. SIDEBAR BUTTONS (Run Analysis) -> Dark button, White Text */
+    /* 5. BUTTONS */
     div[data-testid="stSidebar"] button {
         background-color: #343a40 !important;
         color: #ffffff !important;
         border: none;
     }
-    div[data-testid="stSidebar"] button p {
-        color: #ffffff !important;
-        font-weight: bold !important;
-    }
     div[data-testid="stSidebar"] button:hover {
-        background-color: #23272b !important;
-    }
-
-    /* =============================================
-       DROPDOWN MENU STYLING (The popup list)
-       ============================================= */
-    /* The list container */
-    div[role="listbox"] {
-        background-color: #262730 !important; /* Dark background */
-        border: 1px solid #555 !important;
-    }
-    /* The options inside the list */
-    div[role="option"] {
-        color: #ffffff !important; /* White text */
-        background-color: #262730 !important;
-    }
-    /* Hover and selection state for options */
-    div[role="option"]:hover, div[role="option"][aria-selected="true"] {
-        background-color: #3e404a !important; /* Lighter dark for hover */
+        background-color: #212529 !important;
     }
 
     /* =============================================
        MAIN CONTENT STYLING
        ============================================= */
-    
     /* Metric Cards */
     div[data-testid="stMetric"] {
         background-color: #ffffff;
@@ -128,32 +118,15 @@ st.markdown("""
     }
     div[data-testid="stMetricLabel"] {
         color: #555 !important;
-        font-weight: 500;
     }
     div[data-testid="stMetricValue"] {
         color: #000 !important;
-        font-weight: 700;
     }
     
     /* Tabs */
-    .stTabs [data-baseweb="tab-list"] { 
-        gap: 20px; 
-        border-bottom: 2px solid #f0f0f0; 
-    }
-    .stTabs [data-baseweb="tab"] {
-        height: 50px;
-        white-space: pre-wrap;
-        background-color: transparent;
-        color: #555;
-        font-size: 15px;
-        font-weight: 600;
-        border: none;
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: transparent;
-        color: #008000;
-        border-bottom: 3px solid #008000;
-    }
+    .stTabs [data-baseweb="tab-list"] { border-bottom: 2px solid #f0f0f0; }
+    .stTabs [data-baseweb="tab"] { background-color: transparent; color: #555; }
+    .stTabs [aria-selected="true"] { color: #008000; border-bottom: 3px solid #008000; }
 
     /* Verdict Box */
     .verdict-box {
@@ -165,10 +138,10 @@ st.markdown("""
         color: #1f2937;
     }
     
-    /* Global Text Visibility */
-    p, h1, h2, h3, h4, h5, li, span, div {
-        color: #000000;
-    }
+    /* Global Text */
+    p, h1, h2, h3, h4, h5, li, span, div { color: #000000; }
+    
+    /* Exception: Sidebar items targeted above override this */
     </style>
     """, unsafe_allow_html=True)
 
@@ -230,12 +203,11 @@ def calculate_metrics(df):
     df['Rec_Growth'] = df['Receivables'].pct_change().fillna(0)
     df['Beneish_Flag_DSRI'] = (df['Rec_Growth'] > (df['Sales_Growth'] * 1.3)).astype(int) 
     
-    # Distress (Altman Z''-Score for Non-Manufacturing/General Use)
+    # Distress (Altman Z''-Score)
     X1 = (df['CurrentAssets'] - df['CurrentLiabilities']) / df['TotalAssets'].replace(0, 1)
     X2 = df['PAT'] / df['TotalAssets'].replace(0, 1)
     X3 = df['EBIT'] / df['TotalAssets'].replace(0, 1)
     X4 = df['Equity'] / df['TotalDebt'].replace(0, 1)
-    # X5 (Sales/TA) is not used in the Z''-score model
     df['Z_Score'] = 3.25 + (6.56*X1) + (3.26*X2) + (6.72*X3) + (1.05*X4)
     
     # Life Cycle
@@ -304,13 +276,16 @@ def main():
             st.sidebar.error("Master Dataset not found.")
             st.stop()
         
+        # VISIBILITY FIX: These boxes now use the specific CSS class to render White text
         company = st.sidebar.selectbox("Name", raw_df['Company'].unique())
-        years = sorted(raw_df[raw_df['Company'] == company]['Year'].unique(), reverse=True)
-        year = st.sidebar.selectbox("Financial Year", years)
         
-        if st.sidebar.button("Run Analysis"):
-            df_proc = calculate_metrics(raw_df)
-            row = df_proc[(df_proc['Company'] == company) & (df_proc['Year'] == year)].iloc[0]
+        if company:
+            years = sorted(raw_df[raw_df['Company'] == company]['Year'].unique(), reverse=True)
+            year = st.sidebar.selectbox("Financial Year", years)
+        
+            if st.sidebar.button("Run Analysis"):
+                df_proc = calculate_metrics(raw_df)
+                row = df_proc[(df_proc['Company'] == company) & (df_proc['Year'] == year)].iloc[0]
 
     else:
         with st.sidebar.form("manual_entry"):
