@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Force Light Theme & Fix Sidebar Inputs
+# Force Light Theme & Fix Text Visibility
 st.markdown("""
     <style>
     /* Force Light Background */
@@ -26,54 +26,34 @@ st.markdown("""
         border-right: 1px solid #e9ecef;
     }
     
-    /* --- SIDEBAR INPUT FIXES (CRITICAL) --- */
+    /* --- SIDEBAR FIXES (REQUESTED) --- */
     
-    /* 1. Labels - Dark & Bold */
+    /* 1. Labels (Name, Financial Year) - Make Dark & Bold */
     div[data-testid="stSidebar"] label {
         color: #000000 !important;
         font-weight: 700 !important;
+        font-size: 14px !important;
     }
     
-    /* 2. Dropdown Box (Selectbox) - Light Green */
+    /* 2. Dropdown Box - Make Light Green Background */
     div[data-testid="stSelectbox"] > div > div {
-        background-color: #e6fffa !important;
-        border: 1px solid #008000 !important;
+        background-color: #e6fffa !important; /* Light Green */
+        border: 1px solid #008000 !important; /* Green Border */
         color: #000000 !important;
     }
     
-    /* 3. Text Input Box (Name) - Light Green */
-    div[data-testid="stTextInput"] > div > div {
-        background-color: #e6fffa !important;
-        border: 1px solid #008000 !important;
-    }
-    
-    /* 4. NUMBER INPUTS (The Drag Boxes) - Force Light Green Background */
-    /* Target the container of the input and buttons */
-    div[data-testid="stNumberInput"] div[data-baseweb="input"] {
-        background-color: #e6fffa !important;
-        border: 1px solid #008000 !important;
-        color: #000000 !important;
-    }
-    
-    /* Target the input field itself */
-    div[data-testid="stNumberInput"] input {
-        background-color: transparent !important;
-        color: #000000 !important;
-        font-weight: 600 !important;
-    }
-
-    /* 5. Dropdown Text Fix */
+    /* 3. Text Inside Dropdown - Make Black */
     div[data-testid="stSelectbox"] div[data-testid="stMarkdownContainer"] p {
         color: #000000 !important;
+        font-weight: 500;
     }
     
-    /* 6. Dropdown SVG Icons - Black */
-    div[data-testid="stSelectbox"] svg, 
-    div[data-testid="stNumberInput"] svg {
+    /* 4. Dropdown Arrow - Make Black */
+    div[data-testid="stSelectbox"] svg {
         fill: #000000 !important;
     }
     
-    /* 7. Dropdown Options Menu */
+    /* 5. Dropdown Options Menu (When clicked) */
     div[role="listbox"] {
         background-color: #ffffff !important;
     }
@@ -82,6 +62,10 @@ st.markdown("""
     }
     /* ------------------------------ */
 
+    input {
+        color: #000000 !important; /* Text inside inputs */
+    }
+    
     /* Metric Cards */
     div[data-testid="stMetric"] {
         background-color: #ffffff;
@@ -268,26 +252,25 @@ def main():
             st.subheader("Borrower Details")
             company_input = st.text_input("Name", "New Applicant")
             
-            # --- NUMBER INPUTS: ALLOW NEGATIVES & VISIBLE BOXES ---
             with st.expander("Profit & Loss", expanded=True):
-                rev = st.number_input("Revenue", value=10000.0, step=100.0, min_value=-1e9, format="%.2f")
-                ebit = st.number_input("EBIT", value=2000.0, step=100.0, min_value=-1e9, format="%.2f")
-                pat = st.number_input("Net Profit (PAT)", value=1500.0, step=100.0, min_value=-1e9, format="%.2f")
-                interest = st.number_input("Interest Expense", value=500.0, step=50.0, min_value=-1e9, format="%.2f")
+                rev = st.number_input("Revenue", 10000.0)
+                ebit = st.number_input("EBIT", 2000.0)
+                pat = st.number_input("Net Profit (PAT)", 1500.0)
+                interest = st.number_input("Interest Expense", 500.0)
             
             with st.expander("Balance Sheet", expanded=False):
-                ta = st.number_input("Total Assets", value=15000.0, step=100.0, min_value=-1e9, format="%.2f")
-                debt = st.number_input("Total Debt", value=5000.0, step=100.0, min_value=-1e9, format="%.2f")
-                equity = st.number_input("Equity", value=8000.0, step=100.0, min_value=-1e9, format="%.2f")
-                ca = st.number_input("Current Assets", value=6000.0, step=100.0, min_value=-1e9, format="%.2f")
-                cl = st.number_input("Current Liab.", value=4000.0, step=100.0, min_value=-1e9, format="%.2f")
-                rec = st.number_input("Receivables", value=2000.0, step=100.0, min_value=-1e9, format="%.2f")
+                ta = st.number_input("Total Assets", 15000.0)
+                debt = st.number_input("Total Debt", 5000.0)
+                equity = st.number_input("Equity", 8000.0)
+                ca = st.number_input("Current Assets", 6000.0)
+                cl = st.number_input("Current Liab.", 4000.0)
+                rec = st.number_input("Receivables", 2000.0)
             
             with st.expander("Cash Flow", expanded=False):
-                cfo = st.number_input("CFO (Operating)", value=1200.0, step=100.0, min_value=-1e9, format="%.2f")
-                cfi = st.number_input("CFI (Investing)", value=-500.0, step=100.0, min_value=-1e9, format="%.2f")
-                cff = st.number_input("CFF (Financing)", value=-200.0, step=100.0, min_value=-1e9, format="%.2f")
-                capex = st.number_input("Capex", value=-300.0, step=100.0, min_value=-1e9, format="%.2f")
+                cfo = st.number_input("CFO (Operating)", 1200.0)
+                cfi = st.number_input("CFI (Investing)", -500.0)
+                cff = st.number_input("CFF (Financing)", -200.0)
+                capex = st.number_input("Capex", -300.0)
             
             if st.form_submit_button("Run Analysis"):
                 data = {
@@ -338,7 +321,7 @@ def main():
                     title={'text': "Capital Structure (Debt vs Equity)", 'font': {'color': 'black'}},
                     font=dict(color='black'),
                     height=300, 
-                    template="plotly_white", 
+                    template="plotly_white", # Force White Template
                     paper_bgcolor='rgba(0,0,0,0)', 
                     plot_bgcolor='rgba(0,0,0,0)',
                     legend=dict(font=dict(color='black'))
