@@ -11,53 +11,33 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Force Theme & Targeted CSS Fixes
+# Force Light Theme & Aggressive Sidebar Fixes
 st.markdown("""
     <style>
-    /* =============================================
-       MAIN THEME RESET
-       ============================================= */
-    /* Main App Background - White */
+    /* Force Light Background for Main App */
     .stApp {
         background-color: #ffffff;
         color: #000000;
     }
     
-    /* Sidebar Background - Light Grey/White */
+    /* Sidebar Styling */
     section[data-testid="stSidebar"] {
-        background-color: #f8f9fa;
+        background-color: #f8f9fa; /* Light Grey */
         border-right: 1px solid #e9ecef;
     }
     
-    /* =============================================
-       INPUT WIDGET STYLING (SCREENER STYLE)
-       ============================================= */
-
-    /* 1. SIDEBAR LABELS (e.g. "Name", "Revenue") */
+    /* --- SIDEBAR INPUT FIXES (AGGRESSIVE) --- */
+    
+    /* 1. Labels - Dark & Bold */
     div[data-testid="stSidebar"] label {
-        color: #333333 !important;
+        color: #000000 !important;
         font-weight: 700 !important;
         font-size: 14px !important;
     }
-
-    /* 2. SELECTBOX (The Dropdown) -> White Box, Green Border, Black Text */
-    div[data-testid="stSelectbox"] > div > div {
-        background-color: #ffffff !important;
-        border: 1px solid #008000 !important; /* Green Border */
-        color: #000000 !important;
-    }
-    /* The text inside the selectbox */
-    div[data-testid="stSelectbox"] div[data-testid="stMarkdownContainer"] p {
-        color: #000000 !important; 
-    }
-    /* The Arrow Icon */
-    div[data-testid="stSelectbox"] svg {
-        fill: #000000 !important; 
-    }
-
-    /* 3. TEXT INPUT (Name) -> Light Green Box, Black Text */
+    
+    /* 2. TEXT INPUTS (e.g. "Name") */
     div[data-testid="stTextInput"] > div > div {
-        background-color: #e6fffa !important; /* Light Mint */
+        background-color: #e6fffa !important;
         border: 1px solid #008000 !important;
         color: #000000 !important;
     }
@@ -66,61 +46,50 @@ st.markdown("""
         -webkit-text-fill-color: #000000 !important;
     }
 
-    /* 4. NUMBER INPUTS (The Drag Boxes) -> Light Green Box, Black Text */
-    div[data-testid="stNumberInput"] div[data-baseweb="input"] {
-        background-color: #e6fffa !important; /* Light Mint to match Screener vibe */
+    /* 3. NUMBER INPUTS (The Drag Boxes) - The Critical Fix */
+    /* Target the container */
+    div[data-testid="stNumberInput"] > div > div {
+        background-color: #e6fffa !important;
         border: 1px solid #008000 !important;
         color: #000000 !important;
     }
+    /* Target the input field inside */
     div[data-testid="stNumberInput"] input {
+        background-color: transparent !important;
         color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
-        caret-color: #000000 !important;
         font-weight: 600 !important;
     }
-    /* Fix the +/- buttons inside the drag box */
+    /* Target the +/- buttons */
     div[data-testid="stNumberInput"] button {
         background-color: transparent !important;
         color: #000000 !important;
+        border-left: 1px solid #008000 !important;
+    }
+
+    /* 4. SELECTBOX (Dataset Mode) - Keep Dark with White Text */
+    div[data-testid="stSelectbox"] > div > div {
+        background-color: #0e1117 !important;
+        border: 1px solid #444 !important;
+        color: #ffffff !important;
+    }
+    /* Force the text inside the dropdown to be WHITE */
+    div[data-testid="stSelectbox"] div[data-testid="stMarkdownContainer"] p {
+        color: #ffffff !important;
+    }
+    /* Force the arrow icon to be WHITE */
+    div[data-testid="stSelectbox"] svg {
+        fill: #ffffff !important;
+    }
+
+    /* 5. SIDEBAR BUTTON (Run Analysis) */
+    div[data-testid="stSidebar"] button {
+        background-color: #ff4b4b !important;
+        color: #ffffff !important;
         border: none !important;
     }
-    div[data-testid="stNumberInput"] button:hover {
-        background-color: #bbf7d0 !important;
-    }
-
-    /* 5. SIDEBAR BUTTONS (Run Analysis) -> RED, WHITE TEXT */
-    div[data-testid="stSidebar"] button {
-        background-color: #2e303d !important; /* Dark Grey/Black Button */
-        color: #ffffff !important;
-        border: none;
-    }
-    div[data-testid="stSidebar"] button p {
-        color: #ffffff !important;
-        font-weight: bold !important;
-    }
-    /* Hover effect for button */
-    div[data-testid="stSidebar"] button:hover {
-        background-color: #000000 !important;
-        border: 1px solid #008000 !important;
-    }
-
-    /* =============================================
-       MAIN CONTENT STYLING
-       ============================================= */
     
-    /* Dropdown Options Menu (The list that pops up) */
-    div[role="listbox"] {
-        background-color: #ffffff !important;
-        border: 1px solid #008000 !important;
-    }
-    div[role="listbox"] div {
-        color: #000000 !important;
-        background-color: #ffffff !important;
-    }
-    /* Hover over an option */
-    div[role="option"]:hover {
-        background-color: #e6fffa !important;
-    }
+    /* ------------------------------ */
 
     /* Metric Cards */
     div[data-testid="stMetric"] {
@@ -173,31 +142,28 @@ st.markdown("""
     p, h1, h2, h3, h4, h5, li, span, div {
         color: #000000;
     }
+    /* Exceptions */
+    div[data-testid="stSelectbox"] p { color: #ffffff !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. DATA LOADING ENGINE ---
+# --- 2. DATA LOADING ENGINE (FIXED) ---
 @st.cache_data
 def load_dataset():
     try:
-        # Read all as strings first to safely handle commas
+        # Read as strings to handle commas
         df = pd.read_csv("financials_master.csv", dtype=str)
-        
         cols = ['Revenue', 'EBITDA', 'EBIT', 'PAT', 'Interest', 
                 'TotalAssets', 'TotalDebt', 'Equity', 'CurrentAssets', 'CurrentLiabilities',
                 'Inventory', 'Receivables', 'Cash',
                 'CFO', 'CFI', 'CFF', 'Capex']
         
-        # Clean and convert data
         for c in cols:
-            if c not in df.columns: 
-                df[c] = 0
+            if c not in df.columns: df[c] = 0
             else:
-                # Remove commas and convert to numeric
                 df[c] = df[c].str.replace(',', '', regex=True)
                 df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0)
         
-        # Ensure Year is integer
         if 'Year' in df.columns:
             df['Year'] = pd.to_numeric(df['Year'], errors='coerce').fillna(0).astype(int)
             
@@ -234,12 +200,13 @@ def calculate_metrics(df):
     df['Rec_Growth'] = df['Receivables'].pct_change().fillna(0)
     df['Beneish_Flag_DSRI'] = (df['Rec_Growth'] > (df['Sales_Growth'] * 1.3)).astype(int) 
     
-    # Distress
+    # Distress (Altman Z'' Emerging Market Model)
     X1 = (df['CurrentAssets'] - df['CurrentLiabilities']) / df['TotalAssets'].replace(0, 1)
     X2 = df['PAT'] / df['TotalAssets'].replace(0, 1)
     X3 = df['EBIT'] / df['TotalAssets'].replace(0, 1)
     X4 = df['Equity'] / df['TotalDebt'].replace(0, 1)
-    X5 = df['Revenue'] / df['TotalAssets'].replace(0, 1)
+    # X5 is calculated but not used in Z'' score
+    
     df['Z_Score'] = 3.25 + (6.56*X1) + (3.26*X2) + (6.72*X3) + (1.05*X4)
     
     # Life Cycle
@@ -308,7 +275,6 @@ def main():
             st.sidebar.error("Master Dataset not found.")
             st.stop()
         
-        # This box will now be WHITE with GREEN Border and BLACK text
         company = st.sidebar.selectbox("Name", raw_df['Company'].unique())
         years = sorted(raw_df[raw_df['Company'] == company]['Year'].unique(), reverse=True)
         year = st.sidebar.selectbox("Financial Year", years)
@@ -320,10 +286,8 @@ def main():
     else:
         with st.sidebar.form("manual_entry"):
             st.subheader("Borrower Details")
-            # This box will be GREEN with BLACK text
             company_input = st.text_input("Name", "New Applicant")
             
-            # --- NUMBER INPUTS: ALLOW NEGATIVES & VISIBLE BOXES ---
             with st.expander("Profit & Loss", expanded=True):
                 rev = st.number_input("Revenue", value=10000.0, step=100.0, min_value=-1e9, format="%.2f")
                 ebit = st.number_input("EBIT", value=2000.0, step=100.0, min_value=-1e9, format="%.2f")
