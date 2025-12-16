@@ -14,55 +14,61 @@ st.set_page_config(
 # Force Theme & Targeted CSS Fixes
 st.markdown("""
     <style>
+    /* =============================================
+       MAIN THEME RESET
+       ============================================= */
     /* Main App Background - White */
     .stApp {
         background-color: #ffffff;
         color: #000000;
     }
     
-    /* Sidebar Background - Light Grey */
+    /* Sidebar Background - Light Grey/White */
     section[data-testid="stSidebar"] {
         background-color: #f8f9fa;
         border-right: 1px solid #e9ecef;
     }
     
     /* =============================================
-       SIDEBAR SPECIFIC STYLING FIXES
+       INPUT WIDGET STYLING (SCREENER STYLE)
        ============================================= */
 
-    /* 1. SIDEBAR LABELS (e.g. "Name", "Revenue") -> DARK & BOLD */
+    /* 1. SIDEBAR LABELS (e.g. "Name", "Revenue") */
     div[data-testid="stSidebar"] label {
-        color: #000000 !important;
+        color: #333333 !important;
         font-weight: 700 !important;
         font-size: 14px !important;
     }
 
-    /* 2. SELECTBOX (Dataset Mode) -> DARK BOX, WHITE TEXT */
+    /* 2. SELECTBOX (The Dropdown) -> White Box, Green Border, Black Text */
     div[data-testid="stSelectbox"] > div > div {
-        background-color: #0e1117 !important; /* Keep Dark */
-        border: 1px solid #444 !important;
-        color: #ffffff !important;
+        background-color: #ffffff !important;
+        border: 1px solid #008000 !important; /* Green Border */
+        color: #000000 !important;
     }
+    /* The text inside the selectbox */
     div[data-testid="stSelectbox"] div[data-testid="stMarkdownContainer"] p {
-        color: #ffffff !important; /* White Text */
+        color: #000000 !important; 
     }
+    /* The Arrow Icon */
     div[data-testid="stSelectbox"] svg {
-        fill: #ffffff !important; /* White Arrow */
+        fill: #000000 !important; 
     }
 
-    /* 3. TEXT INPUT (Name) -> LIGHT GREEN BOX, BLACK TEXT */
+    /* 3. TEXT INPUT (Name) -> Light Green Box, Black Text */
     div[data-testid="stTextInput"] > div > div {
-        background-color: #e6fffa !important;
+        background-color: #e6fffa !important; /* Light Mint */
         border: 1px solid #008000 !important;
+        color: #000000 !important;
     }
     div[data-testid="stTextInput"] input {
         color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
     }
 
-    /* 4. NUMBER INPUTS (The Drag Boxes) -> LIGHT GREEN BOX, BLACK TEXT */
+    /* 4. NUMBER INPUTS (The Drag Boxes) -> Light Green Box, Black Text */
     div[data-testid="stNumberInput"] div[data-baseweb="input"] {
-        background-color: #e6fffa !important;
+        background-color: #e6fffa !important; /* Light Mint to match Screener vibe */
         border: 1px solid #008000 !important;
         color: #000000 !important;
     }
@@ -74,18 +80,28 @@ st.markdown("""
     }
     /* Fix the +/- buttons inside the drag box */
     div[data-testid="stNumberInput"] button {
+        background-color: transparent !important;
         color: #000000 !important;
+        border: none !important;
+    }
+    div[data-testid="stNumberInput"] button:hover {
+        background-color: #bbf7d0 !important;
     }
 
     /* 5. SIDEBAR BUTTONS (Run Analysis) -> RED, WHITE TEXT */
     div[data-testid="stSidebar"] button {
-        background-color: #ff4b4b !important;
+        background-color: #2e303d !important; /* Dark Grey/Black Button */
         color: #ffffff !important;
         border: none;
     }
     div[data-testid="stSidebar"] button p {
         color: #ffffff !important;
         font-weight: bold !important;
+    }
+    /* Hover effect for button */
+    div[data-testid="stSidebar"] button:hover {
+        background-color: #000000 !important;
+        border: 1px solid #008000 !important;
     }
 
     /* =============================================
@@ -95,9 +111,15 @@ st.markdown("""
     /* Dropdown Options Menu (The list that pops up) */
     div[role="listbox"] {
         background-color: #ffffff !important;
+        border: 1px solid #008000 !important;
     }
     div[role="listbox"] div {
         color: #000000 !important;
+        background-color: #ffffff !important;
+    }
+    /* Hover over an option */
+    div[role="option"]:hover {
+        background-color: #e6fffa !important;
     }
 
     /* Metric Cards */
@@ -151,7 +173,6 @@ st.markdown("""
     p, h1, h2, h3, h4, h5, li, span, div {
         color: #000000;
     }
-    /* Exception: Sidebar items targeted above override this */
     </style>
     """, unsafe_allow_html=True)
 
@@ -287,7 +308,7 @@ def main():
             st.sidebar.error("Master Dataset not found.")
             st.stop()
         
-        # This box will be DARK with WHITE text
+        # This box will now be WHITE with GREEN Border and BLACK text
         company = st.sidebar.selectbox("Name", raw_df['Company'].unique())
         years = sorted(raw_df[raw_df['Company'] == company]['Year'].unique(), reverse=True)
         year = st.sidebar.selectbox("Financial Year", years)
