@@ -48,21 +48,29 @@ st.markdown("""
     }
     
     /* 4. NUMBER INPUTS (The Drag Boxes) - Force Light Green Background */
+    /* Target the container of the input and buttons */
     div[data-testid="stNumberInput"] div[data-baseweb="input"] {
         background-color: #e6fffa !important;
         border: 1px solid #008000 !important;
         color: #000000 !important;
     }
     
-    /* 5. Force Text Color Inside All Inputs to Black */
-    input {
+    /* Target the input field itself */
+    div[data-testid="stNumberInput"] input {
+        background-color: transparent !important;
         color: #000000 !important;
         font-weight: 600 !important;
     }
-    
-    /* 6. Dropdown Text Fix */
+
+    /* 5. Dropdown Text Fix */
     div[data-testid="stSelectbox"] div[data-testid="stMarkdownContainer"] p {
         color: #000000 !important;
+    }
+    
+    /* 6. Dropdown SVG Icons - Black */
+    div[data-testid="stSelectbox"] svg, 
+    div[data-testid="stNumberInput"] svg {
+        fill: #000000 !important;
     }
     
     /* 7. Dropdown Options Menu */
