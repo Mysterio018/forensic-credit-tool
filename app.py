@@ -17,61 +17,67 @@ st.markdown("""
     /* =============================================
        MAIN THEME RESET
        ============================================= */
-    /* Main App Background - White */
     .stApp {
         background-color: #ffffff;
         color: #000000;
     }
     
-    /* Sidebar Background - Light Grey */
     section[data-testid="stSidebar"] {
         background-color: #f8f9fa;
         border-right: 1px solid #e9ecef;
     }
     
     /* =============================================
-       SIDEBAR WIDGET STYLING - UNIFIED DARK INPUTS
+       SIDEBAR INPUTS - FORCED DARK MODE WITH WHITE TEXT
        ============================================= */
 
-    /* 1. SIDEBAR LABELS (The text "Name", "Revenue" above the boxes) */
+    /* 1. LABELS (Name, Revenue, etc.) */
     div[data-testid="stSidebar"] label {
-        color: #212529 !important; /* Dark Grey text to stand out on light sidebar */
+        color: #212529 !important;
         font-weight: 700 !important;
         font-size: 14px !important;
     }
 
-    /* 2. SELECTBOX (THE DROPDOWN) - FIXING VISIBILITY HERE */
+    /* 2. SELECTBOX (The Dropdown) - NUCLEAR FIX */
     
-    /* The Closed Box Container */
-    div[data-testid="stSelectbox"] > div > div {
+    /* Target the main container of the selectbox */
+    div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
         background-color: #262730 !important; /* Dark Background */
         border: 1px solid #444 !important;
         color: #ffffff !important; /* White Text */
     }
     
-    /* The Text displayed INSIDE the closed box (e.g., "Infosys") */
-    div[data-testid="stSelectbox"] div[data-testid="stMarkdownContainer"] p {
-        color: #ffffff !important; /* FORCE WHITE TEXT */
+    /* FORCE all text inside the selectbox to be WHITE */
+    div[data-testid="stSelectbox"] div[data-baseweb="select"] * {
+        color: #ffffff !important; 
     }
     
-    /* The Arrow Icon */
-    div[data-testid="stSelectbox"] svg {
-        fill: #ffffff !important; /* White Arrow */
+    /* Target the SVG Arrow icon specifically */
+    div[data-testid="stSelectbox"] div[data-baseweb="select"] svg {
+        fill: #ffffff !important;
     }
 
-    /* 3. DROPDOWN MENU (The list that pops open) */
-    div[role="listbox"] {
-        background-color: #262730 !important; /* Dark Background */
-        border: 1px solid #444 !important;
-    }
-    div[role="option"] {
+    /* 3. DROPDOWN MENU OPTIONS (The Popup List) */
+    
+    /* The container of the options */
+    ul[data-baseweb="menu"] {
         background-color: #262730 !important;
-        color: #ffffff !important; /* White Text Options */
     }
-    /* Hover state in the list */
-    div[role="option"]:hover, div[role="option"][aria-selected="true"] {
-        background-color: #4a4d5a !important;
+    
+    /* The individual options */
+    li[data-baseweb="option"] {
+        background-color: #262730 !important;
+        color: #ffffff !important; /* Force White Text */
+    }
+    
+    /* The text inside the option */
+    li[data-baseweb="option"] div {
         color: #ffffff !important;
+    }
+    
+    /* Hover state for options */
+    li[data-baseweb="option"]:hover, li[data-baseweb="option"][aria-selected="true"] {
+        background-color: #4a4d5a !important;
     }
 
     /* 4. MANUAL ENTRY INPUTS (Text & Number) */
@@ -116,12 +122,8 @@ st.markdown("""
         border: 1px solid #e0e0e0;
         box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
-    div[data-testid="stMetricLabel"] {
-        color: #555 !important;
-    }
-    div[data-testid="stMetricValue"] {
-        color: #000 !important;
-    }
+    div[data-testid="stMetricLabel"] { color: #555 !important; }
+    div[data-testid="stMetricValue"] { color: #000 !important; }
     
     /* Tabs */
     .stTabs [data-baseweb="tab-list"] { border-bottom: 2px solid #f0f0f0; }
@@ -140,8 +142,6 @@ st.markdown("""
     
     /* Global Text */
     p, h1, h2, h3, h4, h5, li, span, div { color: #000000; }
-    
-    /* Exception: Sidebar items targeted above override this */
     </style>
     """, unsafe_allow_html=True)
 
@@ -276,7 +276,7 @@ def main():
             st.sidebar.error("Master Dataset not found.")
             st.stop()
         
-        # VISIBILITY FIX: These boxes now use the specific CSS class to render White text
+        # The CSS above will now force this text to be white
         company = st.sidebar.selectbox("Name", raw_df['Company'].unique())
         
         if company:
@@ -292,7 +292,7 @@ def main():
             st.subheader("Borrower Details")
             company_input = st.text_input("Name", "New Applicant")
             
-            # --- NUMBER INPUTS: ALLOW NEGATIVES & VISIBLE BOXES ---
+            # --- NUMBER INPUTS ---
             with st.expander("Profit & Loss", expanded=True):
                 rev = st.number_input("Revenue", value=10000.0, step=100.0, min_value=-1e9, format="%.2f")
                 ebit = st.number_input("EBIT", value=2000.0, step=100.0, min_value=-1e9, format="%.2f")
