@@ -11,86 +11,113 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Force Light Theme & Aggressive Sidebar Fixes
+# Force Theme & Targeted CSS Fixes
 st.markdown("""
     <style>
-    /* Force Light Background for Main App */
+    /* =============================================
+       MAIN THEME RESET
+       ============================================= */
+    /* Main App Background - White */
     .stApp {
         background-color: #ffffff;
         color: #000000;
     }
     
-    /* Sidebar Styling */
+    /* Sidebar Background - Light Grey */
     section[data-testid="stSidebar"] {
-        background-color: #f8f9fa; /* Light Grey */
+        background-color: #f8f9fa;
         border-right: 1px solid #e9ecef;
     }
     
-    /* --- SIDEBAR INPUT FIXES (AGGRESSIVE) --- */
-    
-    /* 1. Labels - Dark & Bold */
+    /* =============================================
+       SIDEBAR WIDGET STYLING (Clean & Visible)
+       ============================================= */
+
+    /* 1. SIDEBAR LABELS */
     div[data-testid="stSidebar"] label {
-        color: #000000 !important;
-        font-weight: 700 !important;
+        color: #212529 !important; /* Dark grey text */
+        font-weight: 600 !important;
         font-size: 14px !important;
     }
-    
-    /* 2. TEXT INPUTS (e.g. "Name") */
-    div[data-testid="stTextInput"] > div > div {
-        background-color: #e6fffa !important;
-        border: 1px solid #008000 !important;
-        color: #000000 !important;
-    }
-    div[data-testid="stTextInput"] input {
-        color: #000000 !important;
-        -webkit-text-fill-color: #000000 !important;
-    }
 
-    /* 3. NUMBER INPUTS (The Drag Boxes) - The Critical Fix */
-    /* Target the container */
-    div[data-testid="stNumberInput"] > div > div {
-        background-color: #e6fffa !important;
-        border: 1px solid #008000 !important;
-        color: #000000 !important;
-    }
-    /* Target the input field inside */
-    div[data-testid="stNumberInput"] input {
-        background-color: transparent !important;
-        color: #000000 !important;
-        -webkit-text-fill-color: #000000 !important;
-        font-weight: 600 !important;
-    }
-    /* Target the +/- buttons */
-    div[data-testid="stNumberInput"] button {
-        background-color: transparent !important;
-        color: #000000 !important;
-        border-left: 1px solid #008000 !important;
-    }
-
-    /* 4. SELECTBOX (Dataset Mode) - Keep Dark with White Text */
+    /* 2. SELECTBOX (Dropdowns) -> White background, Black text */
+    /* The main box */
     div[data-testid="stSelectbox"] > div > div {
-        background-color: #0e1117 !important;
-        border: 1px solid #444 !important;
-        color: #ffffff !important;
+        background-color: #ffffff !important;
+        border: 1px solid #ced4da !important;
+        color: #212529 !important;
     }
-    /* Force the text inside the dropdown to be WHITE */
+    /* The text inside the box */
     div[data-testid="stSelectbox"] div[data-testid="stMarkdownContainer"] p {
-        color: #ffffff !important;
+        color: #212529 !important; 
     }
-    /* Force the arrow icon to be WHITE */
+    /* The arrow icon */
     div[data-testid="stSelectbox"] svg {
-        fill: #ffffff !important;
+        fill: #212529 !important; 
     }
 
-    /* 5. SIDEBAR BUTTON (Run Analysis) */
-    div[data-testid="stSidebar"] button {
-        background-color: #ff4b4b !important;
-        color: #ffffff !important;
+    /* 3. TEXT INPUT & NUMBER INPUTS (Manual Entry) -> Light background, Black text */
+    /* Target the outer container of the input */
+    div[data-testid="stTextInput"] > div > div,
+    div[data-testid="stNumberInput"] > div > div {
+        background-color: #ffffff !important; /* White background */
+        border: 1px solid #ced4da !important;
+        color: #212529 !important;
+    }
+    /* Target the input text itself */
+    div[data-testid="stTextInput"] input,
+    div[data-testid="stNumberInput"] input {
+        color: #212529 !important;
+        -webkit-text-fill-color: #212529 !important;
+        caret-color: #212529 !important;
+    }
+    /* Fix +/- buttons in NumberInput so they are visible */
+    div[data-testid="stNumberInput"] button {
+        color: #212529 !important;
+        background-color: transparent !important;
         border: none !important;
     }
-    
-    /* ------------------------------ */
+    /* Hover effect for +/- buttons */
+    div[data-testid="stNumberInput"] button:hover {
+        background-color: #e9ecef !important;
+    }
 
+    /* 4. SIDEBAR BUTTONS (Run Analysis) -> Dark button, White Text */
+    div[data-testid="stSidebar"] button {
+        background-color: #343a40 !important;
+        color: #ffffff !important;
+        border: none;
+    }
+    div[data-testid="stSidebar"] button p {
+        color: #ffffff !important;
+        font-weight: bold !important;
+    }
+    div[data-testid="stSidebar"] button:hover {
+        background-color: #23272b !important;
+    }
+
+    /* =============================================
+       DROPDOWN MENU STYLING (The popup list)
+       ============================================= */
+    /* The list container */
+    div[role="listbox"] {
+        background-color: #ffffff !important;
+        border: 1px solid #ced4da !important;
+    }
+    /* The options inside the list */
+    div[role="option"] {
+        color: #212529 !important;
+        background-color: #ffffff !important;
+    }
+    /* Hover and selection state for options */
+    div[role="option"]:hover, div[role="option"][aria-selected="true"] {
+        background-color: #e9ecef !important; /* Light grey */
+    }
+
+    /* =============================================
+       MAIN CONTENT STYLING
+       ============================================= */
+    
     /* Metric Cards */
     div[data-testid="stMetric"] {
         background-color: #ffffff;
@@ -142,28 +169,31 @@ st.markdown("""
     p, h1, h2, h3, h4, h5, li, span, div {
         color: #000000;
     }
-    /* Exceptions */
-    div[data-testid="stSelectbox"] p { color: #ffffff !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. DATA LOADING ENGINE (FIXED) ---
+# --- 2. DATA LOADING ENGINE ---
 @st.cache_data
 def load_dataset():
     try:
-        # Read as strings to handle commas
+        # Read all as strings first to safely handle commas
         df = pd.read_csv("financials_master.csv", dtype=str)
+        
         cols = ['Revenue', 'EBITDA', 'EBIT', 'PAT', 'Interest', 
                 'TotalAssets', 'TotalDebt', 'Equity', 'CurrentAssets', 'CurrentLiabilities',
                 'Inventory', 'Receivables', 'Cash',
                 'CFO', 'CFI', 'CFF', 'Capex']
         
+        # Clean and convert data
         for c in cols:
-            if c not in df.columns: df[c] = 0
+            if c not in df.columns: 
+                df[c] = 0
             else:
+                # Remove commas and convert to numeric
                 df[c] = df[c].str.replace(',', '', regex=True)
                 df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0)
         
+        # Ensure Year is integer
         if 'Year' in df.columns:
             df['Year'] = pd.to_numeric(df['Year'], errors='coerce').fillna(0).astype(int)
             
@@ -200,13 +230,12 @@ def calculate_metrics(df):
     df['Rec_Growth'] = df['Receivables'].pct_change().fillna(0)
     df['Beneish_Flag_DSRI'] = (df['Rec_Growth'] > (df['Sales_Growth'] * 1.3)).astype(int) 
     
-    # Distress (Altman Z'' Emerging Market Model)
+    # Distress (Altman Z''-Score for Non-Manufacturing/General Use)
     X1 = (df['CurrentAssets'] - df['CurrentLiabilities']) / df['TotalAssets'].replace(0, 1)
     X2 = df['PAT'] / df['TotalAssets'].replace(0, 1)
     X3 = df['EBIT'] / df['TotalAssets'].replace(0, 1)
     X4 = df['Equity'] / df['TotalDebt'].replace(0, 1)
-    # X5 is calculated but not used in Z'' score
-    
+    # X5 (Sales/TA) is not used in the Z''-score model
     df['Z_Score'] = 3.25 + (6.56*X1) + (3.26*X2) + (6.72*X3) + (1.05*X4)
     
     # Life Cycle
@@ -250,7 +279,7 @@ def generate_formal_memo(row):
         rec_text = "The borrower exhibits signs of significant financial distress. Lending is not recommended without substantial collateral or guarantees."
 
     forensic_notes = []
-    if row['Z_Score'] < 1.23: forensic_notes.append("Altman Z-Score indicates potential distress zone.")
+    if row['Z_Score'] < 1.23: forensic_notes.append("Altman Z''-Score indicates potential distress zone.")
     if row['CFO_to_PAT'] < 0.8: forensic_notes.append("Earnings Quality Concern: Operating Cash Flow is significantly lower than Net Profit.")
     if row['Beneish_Flag_DSRI'] == 1: forensic_notes.append("Revenue Recognition Alert: Receivables are growing faster than Revenue.")
     if row['Debt_Equity'] > 2.5: forensic_notes.append("Leverage Alert: Debt-to-Equity ratio exceeds conservative thresholds.")
@@ -288,6 +317,7 @@ def main():
             st.subheader("Borrower Details")
             company_input = st.text_input("Name", "New Applicant")
             
+            # --- NUMBER INPUTS: ALLOW NEGATIVES & VISIBLE BOXES ---
             with st.expander("Profit & Loss", expanded=True):
                 rev = st.number_input("Revenue", value=10000.0, step=100.0, min_value=-1e9, format="%.2f")
                 ebit = st.number_input("EBIT", value=2000.0, step=100.0, min_value=-1e9, format="%.2f")
@@ -458,7 +488,7 @@ def main():
             z = row['Z_Score']
             fig_gauge = go.Figure(go.Indicator(
                 mode = "gauge+number", value = z,
-                title = {'text': "Altman Z-Score", 'font': {'color': 'black'}},
+                title = {'text': "Altman Z''-Score", 'font': {'color': 'black'}},
                 number = {'font': {'color': 'black'}},
                 gauge = {
                     'axis': {'range': [None, 5], 'tickfont': {'color': 'black'}},
