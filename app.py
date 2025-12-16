@@ -14,7 +14,7 @@ st.set_page_config(
 # Force Light Theme & Fix Sidebar Inputs
 st.markdown("""
     <style>
-    /* Force Light Background for Main App */
+    /* Force Light Background */
     .stApp {
         background-color: #ffffff;
         color: #000000;
@@ -34,36 +34,45 @@ st.markdown("""
         font-weight: 700 !important;
     }
     
-    /* 2. Dropdown & Text Input Box (Name) - Light Green Background, Black Text */
+    /* 2. Dropdown Box & Text Input Backgrounds - Light Green */
     div[data-testid="stSelectbox"] > div > div,
     div[data-testid="stTextInput"] > div > div {
         background-color: #e6fffa !important;
         border: 1px solid #008000 !important;
     }
     
-    div[data-testid="stSelectbox"] div[data-testid="stMarkdownContainer"] p,
-    div[data-testid="stTextInput"] input {
-        color: #000000 !important; /* Black text for Green boxes */
+    /* 3. NUMBER INPUTS (The Drag Boxes) - Background */
+    div[data-testid="stNumberInput"] div[data-baseweb="input"] {
+        background-color: #e6fffa !important;
+        border: 1px solid #008000 !important;
     }
     
-    /* 3. NUMBER INPUTS (The Drag Boxes) - Fix Visibility */
-    /* Since these stay dark, we force the text to be WHITE */
-    div[data-testid="stNumberInput"] input {
-        color: #ffffff !important; /* WHITE TEXT */
-        font-weight: 600 !important;
+    /* --- FIX: MAKE SIDEBAR TEXT WHITE FOR VISIBILITY --- */
+    
+    /* Fix 1: Dropdown Text (Company Names) -> WHITE */
+    section[data-testid="stSidebar"] div[data-testid="stSelectbox"] p {
+         color: #ffffff !important;
     }
     
-    /* Optional: Ensure the +/- buttons are also visible */
-    div[data-testid="stNumberInput"] button {
-        color: #ffffff !important;
+    /* Fix 2: Sidebar Buttons (Run Analysis) Text -> WHITE */
+    section[data-testid="stSidebar"] button {
+         color: #ffffff !important;
     }
 
-    /* 4. Dropdown SVG Icons - Black */
-    div[data-testid="stSelectbox"] svg {
+    /* Keep number input text black as requested previously */
+    div[data-testid="stNumberInput"] input {
+        background-color: transparent !important;
+        color: #000000 !important; 
+        font-weight: 600 !important;
+    }
+
+    /* Dropdown SVG Icons */
+    div[data-testid="stSelectbox"] svg, 
+    div[data-testid="stNumberInput"] svg {
         fill: #000000 !important;
     }
     
-    /* 5. Dropdown Options Menu */
+    /* Dropdown Options Menu (When clicked) */
     div[role="listbox"] {
         background-color: #ffffff !important;
     }
@@ -122,11 +131,6 @@ st.markdown("""
     /* Global Text Visibility */
     p, h1, h2, h3, h4, h5, li, span, div {
         color: #000000;
-    }
-    /* Except inside the number inputs */
-    div[data-testid="stNumberInput"] p,
-    div[data-testid="stNumberInput"] div {
-        color: inherit; 
     }
     </style>
     """, unsafe_allow_html=True)
@@ -263,7 +267,7 @@ def main():
             st.subheader("Borrower Details")
             company_input = st.text_input("Name", "New Applicant")
             
-            # --- NUMBER INPUTS: ALLOW NEGATIVES ---
+            # --- NUMBER INPUTS: ALLOW NEGATIVES & VISIBLE BOXES ---
             with st.expander("Profit & Loss", expanded=True):
                 rev = st.number_input("Revenue", value=10000.0, step=100.0, min_value=-1e9, format="%.2f")
                 ebit = st.number_input("EBIT", value=2000.0, step=100.0, min_value=-1e9, format="%.2f")
