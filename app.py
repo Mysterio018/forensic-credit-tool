@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Force Light Theme & Fix Text Visibility
+# Force Light Theme & Fix Sidebar Inputs
 st.markdown("""
     <style>
     /* Force Light Background */
@@ -26,7 +26,7 @@ st.markdown("""
         border-right: 1px solid #e9ecef;
     }
     
-    /* --- SIDEBAR INPUT FIXES --- */
+    /* --- SIDEBAR INPUT FIXES (CRITICAL) --- */
     
     /* 1. Labels - Dark & Bold */
     div[data-testid="stSidebar"] label {
@@ -34,30 +34,38 @@ st.markdown("""
         font-weight: 700 !important;
     }
     
-    /* 2. Dropdown & Input Box Backgrounds - Light Green */
-    div[data-testid="stSelectbox"] > div > div,
-    div[data-testid="stTextInput"] > div > div,
-    div[data-testid="stNumberInput"] > div > div {
-        background-color: #e6fffa !important; /* Light Green */
-        border: 1px solid #008000 !important; /* Green Border */
+    /* 2. Dropdown Box (Selectbox) - Light Green */
+    div[data-testid="stSelectbox"] > div > div {
+        background-color: #e6fffa !important;
+        border: 1px solid #008000 !important;
         color: #000000 !important;
     }
     
-    /* 3. Text Inside Inputs - Black */
-    div[data-testid="stSelectbox"] div[data-testid="stMarkdownContainer"] p,
-    input[type="text"],
-    input[type="number"] {
+    /* 3. Text Input Box (Name) - Light Green */
+    div[data-testid="stTextInput"] > div > div {
+        background-color: #e6fffa !important;
+        border: 1px solid #008000 !important;
+    }
+    
+    /* 4. NUMBER INPUTS (The Drag Boxes) - Force Light Green Background */
+    div[data-testid="stNumberInput"] div[data-baseweb="input"] {
+        background-color: #e6fffa !important;
+        border: 1px solid #008000 !important;
         color: #000000 !important;
-        font-weight: 500 !important;
     }
     
-    /* 4. Dropdown SVG Icons - Black */
-    div[data-testid="stSelectbox"] svg, 
-    div[data-testid="stNumberInput"] svg {
-        fill: #000000 !important;
+    /* 5. Force Text Color Inside All Inputs to Black */
+    input {
+        color: #000000 !important;
+        font-weight: 600 !important;
     }
     
-    /* 5. Dropdown Options Menu */
+    /* 6. Dropdown Text Fix */
+    div[data-testid="stSelectbox"] div[data-testid="stMarkdownContainer"] p {
+        color: #000000 !important;
+    }
+    
+    /* 7. Dropdown Options Menu */
     div[role="listbox"] {
         background-color: #ffffff !important;
     }
@@ -252,7 +260,7 @@ def main():
             st.subheader("Borrower Details")
             company_input = st.text_input("Name", "New Applicant")
             
-            # --- UPDATED: Allow Negative Values using min_value & step ---
+            # --- NUMBER INPUTS: ALLOW NEGATIVES & VISIBLE BOXES ---
             with st.expander("Profit & Loss", expanded=True):
                 rev = st.number_input("Revenue", value=10000.0, step=100.0, min_value=-1e9, format="%.2f")
                 ebit = st.number_input("EBIT", value=2000.0, step=100.0, min_value=-1e9, format="%.2f")
