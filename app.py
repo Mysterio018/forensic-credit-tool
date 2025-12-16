@@ -11,10 +11,10 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Force Light Theme & Fix Text Visibility
+# Force Light Theme & Fix Sidebar Inputs
 st.markdown("""
     <style>
-    /* Force Light Background */
+    /* Force Light Background for Main App */
     .stApp {
         background-color: #ffffff;
         color: #000000;
@@ -34,26 +34,32 @@ st.markdown("""
         font-weight: 700 !important;
     }
     
-    /* 2. Dropdown & Input Box Backgrounds - Light Green */
+    /* 2. Dropdown & Text Input Box (Name) - Light Green Background, Black Text */
     div[data-testid="stSelectbox"] > div > div,
-    div[data-testid="stTextInput"] > div > div,
-    div[data-testid="stNumberInput"] > div > div {
-        background-color: #e6fffa !important; /* Light Green */
-        border: 1px solid #008000 !important; /* Green Border */
-        color: #000000 !important;
+    div[data-testid="stTextInput"] > div > div {
+        background-color: #e6fffa !important;
+        border: 1px solid #008000 !important;
     }
     
-    /* 3. Text Inside Inputs - Black */
     div[data-testid="stSelectbox"] div[data-testid="stMarkdownContainer"] p,
-    input[type="text"],
-    input[type="number"] {
-        color: #000000 !important;
-        font-weight: 500 !important;
+    div[data-testid="stTextInput"] input {
+        color: #000000 !important; /* Black text for Green boxes */
     }
     
+    /* 3. NUMBER INPUTS (The Drag Boxes) - Fix Visibility */
+    /* Since these stay dark, we force the text to be WHITE */
+    div[data-testid="stNumberInput"] input {
+        color: #ffffff !important; /* WHITE TEXT */
+        font-weight: 600 !important;
+    }
+    
+    /* Optional: Ensure the +/- buttons are also visible */
+    div[data-testid="stNumberInput"] button {
+        color: #ffffff !important;
+    }
+
     /* 4. Dropdown SVG Icons - Black */
-    div[data-testid="stSelectbox"] svg, 
-    div[data-testid="stNumberInput"] svg {
+    div[data-testid="stSelectbox"] svg {
         fill: #000000 !important;
     }
     
@@ -116,6 +122,11 @@ st.markdown("""
     /* Global Text Visibility */
     p, h1, h2, h3, h4, h5, li, span, div {
         color: #000000;
+    }
+    /* Except inside the number inputs */
+    div[data-testid="stNumberInput"] p,
+    div[data-testid="stNumberInput"] div {
+        color: inherit; 
     }
     </style>
     """, unsafe_allow_html=True)
@@ -252,7 +263,7 @@ def main():
             st.subheader("Borrower Details")
             company_input = st.text_input("Name", "New Applicant")
             
-            # --- UPDATED: Allow Negative Values using min_value & step ---
+            # --- NUMBER INPUTS: ALLOW NEGATIVES ---
             with st.expander("Profit & Loss", expanded=True):
                 rev = st.number_input("Revenue", value=10000.0, step=100.0, min_value=-1e9, format="%.2f")
                 ebit = st.number_input("EBIT", value=2000.0, step=100.0, min_value=-1e9, format="%.2f")
