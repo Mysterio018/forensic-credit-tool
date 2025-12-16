@@ -11,75 +11,94 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Force Light Theme & Fix Sidebar Inputs
+# Force Theme & Targeted CSS Fixes
 st.markdown("""
     <style>
-    /* Force Light Background */
+    /* Main App Background - White */
     .stApp {
         background-color: #ffffff;
         color: #000000;
     }
     
-    /* Sidebar Styling */
+    /* Sidebar Background - Light Grey */
     section[data-testid="stSidebar"] {
-        background-color: #f8f9fa; /* Light Grey */
+        background-color: #f8f9fa;
         border-right: 1px solid #e9ecef;
     }
     
-    /* --- SIDEBAR INPUT FIXES --- */
-    
-    /* 1. Labels - Dark & Bold */
+    /* =============================================
+       SIDEBAR SPECIFIC STYLING FIXES
+       ============================================= */
+
+    /* 1. SIDEBAR LABELS (e.g. "Name", "Revenue") -> DARK & BOLD */
     div[data-testid="stSidebar"] label {
         color: #000000 !important;
         font-weight: 700 !important;
+        font-size: 14px !important;
     }
-    
-    /* 2. Dropdown Box & Text Input Backgrounds - Light Green */
-    div[data-testid="stSelectbox"] > div > div,
+
+    /* 2. SELECTBOX (Dataset Mode) -> DARK BOX, WHITE TEXT */
+    div[data-testid="stSelectbox"] > div > div {
+        background-color: #0e1117 !important; /* Keep Dark */
+        border: 1px solid #444 !important;
+        color: #ffffff !important;
+    }
+    div[data-testid="stSelectbox"] div[data-testid="stMarkdownContainer"] p {
+        color: #ffffff !important; /* White Text */
+    }
+    div[data-testid="stSelectbox"] svg {
+        fill: #ffffff !important; /* White Arrow */
+    }
+
+    /* 3. TEXT INPUT (Name) -> LIGHT GREEN BOX, BLACK TEXT */
     div[data-testid="stTextInput"] > div > div {
         background-color: #e6fffa !important;
         border: 1px solid #008000 !important;
     }
-    
-    /* 3. NUMBER INPUTS (The Drag Boxes) - Background */
+    div[data-testid="stTextInput"] input {
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
+    }
+
+    /* 4. NUMBER INPUTS (The Drag Boxes) -> LIGHT GREEN BOX, BLACK TEXT */
     div[data-testid="stNumberInput"] div[data-baseweb="input"] {
         background-color: #e6fffa !important;
         border: 1px solid #008000 !important;
+        color: #000000 !important;
     }
-    
-    /* --- FIX: MAKE SIDEBAR TEXT WHITE FOR VISIBILITY --- */
-    
-    /* Fix 1: Dropdown Text (Company Names) -> WHITE */
-    section[data-testid="stSidebar"] div[data-testid="stSelectbox"] p {
-         color: #ffffff !important;
-    }
-    
-    /* Fix 2: Sidebar Buttons (Run Analysis) Text -> WHITE */
-    section[data-testid="stSidebar"] button {
-         color: #ffffff !important;
-    }
-
-    /* Keep number input text black as requested previously */
     div[data-testid="stNumberInput"] input {
-        background-color: transparent !important;
-        color: #000000 !important; 
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
+        caret-color: #000000 !important;
         font-weight: 600 !important;
     }
-
-    /* Dropdown SVG Icons */
-    div[data-testid="stSelectbox"] svg, 
-    div[data-testid="stNumberInput"] svg {
-        fill: #000000 !important;
+    /* Fix the +/- buttons inside the drag box */
+    div[data-testid="stNumberInput"] button {
+        color: #000000 !important;
     }
+
+    /* 5. SIDEBAR BUTTONS (Run Analysis) -> RED, WHITE TEXT */
+    div[data-testid="stSidebar"] button {
+        background-color: #ff4b4b !important;
+        color: #ffffff !important;
+        border: none;
+    }
+    div[data-testid="stSidebar"] button p {
+        color: #ffffff !important;
+        font-weight: bold !important;
+    }
+
+    /* =============================================
+       MAIN CONTENT STYLING
+       ============================================= */
     
-    /* Dropdown Options Menu (When clicked) */
+    /* Dropdown Options Menu (The list that pops up) */
     div[role="listbox"] {
         background-color: #ffffff !important;
     }
     div[role="listbox"] div {
         color: #000000 !important;
     }
-    /* ------------------------------ */
 
     /* Metric Cards */
     div[data-testid="stMetric"] {
@@ -125,17 +144,18 @@ st.markdown("""
         border: 1px solid #bbf7d0;
         border-radius: 8px;
         margin-bottom: 20px;
-        color: #1f2937; /* Dark Charcoal */
+        color: #1f2937;
     }
     
     /* Global Text Visibility */
     p, h1, h2, h3, h4, h5, li, span, div {
         color: #000000;
     }
+    /* Exception: Sidebar items targeted above override this */
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. DATA LOADING ENGINE (FIXED FOR COMMAS) ---
+# --- 2. DATA LOADING ENGINE ---
 @st.cache_data
 def load_dataset():
     try:
@@ -267,17 +287,19 @@ def main():
             st.sidebar.error("Master Dataset not found.")
             st.stop()
         
+        # This box will be DARK with WHITE text
         company = st.sidebar.selectbox("Name", raw_df['Company'].unique())
         years = sorted(raw_df[raw_df['Company'] == company]['Year'].unique(), reverse=True)
         year = st.sidebar.selectbox("Financial Year", years)
         
-        if st.sidebar.button("Run Analysis", type="primary"):
+        if st.sidebar.button("Run Analysis"):
             df_proc = calculate_metrics(raw_df)
             row = df_proc[(df_proc['Company'] == company) & (df_proc['Year'] == year)].iloc[0]
 
     else:
         with st.sidebar.form("manual_entry"):
             st.subheader("Borrower Details")
+            # This box will be GREEN with BLACK text
             company_input = st.text_input("Name", "New Applicant")
             
             # --- NUMBER INPUTS: ALLOW NEGATIVES & VISIBLE BOXES ---
@@ -315,6 +337,7 @@ def main():
         # HEADER
         st.markdown(f"## Credit Report — {row['Company']}")
         st.markdown(f"**FY:** {row['Year']} | **Source:** {mode} | **Generated by:** Auto-Assessment")
+        st.caption("ℹ️ Note: All financial values are in INR Crores.")
         st.markdown("---")
 
         # TABS
