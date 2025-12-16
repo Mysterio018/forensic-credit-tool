@@ -28,83 +28,70 @@ st.markdown("""
     }
     
     /* =============================================
-       NUCLEAR TEXT FIX FOR SIDEBAR
+       SIDEBAR INPUTS - DARK MODE WITH WHITE TEXT
        ============================================= */
 
-    /* 1. FORCE ALL TEXT INSIDE SIDEBAR INPUT BOXES TO BE WHITE */
-    /* This targets Selectboxes, Text Inputs, Number Inputs */
-    div[data-testid="stSidebar"] div[data-baseweb="select"] > div,
-    div[data-testid="stSidebar"] div[data-baseweb="input"] > div {
+    /* 1. INPUT BOXES (Selectbox, Text, Number) */
+    /* Target the container */
+    [data-testid="stSidebar"] [data-baseweb="select"] > div,
+    [data-testid="stSidebar"] [data-baseweb="input"] > div {
         background-color: #262730 !important; /* Dark Grey Background */
         border: 1px solid #4a4a4a !important;
-        color: #ffffff !important; /* White Text */
+        color: white !important;
     }
 
-    /* Force the actual text value inside the box to be white */
-    div[data-testid="stSidebar"] div[data-baseweb="select"] span,
-    div[data-testid="stSidebar"] div[data-baseweb="select"] div,
-    div[data-testid="stSidebar"] div[data-baseweb="input"] input {
-        color: #ffffff !important;
-        -webkit-text-fill-color: #ffffff !important;
-        caret-color: #ffffff !important;
+    /* 2. FORCE TEXT COLOR INSIDE INPUTS */
+    /* This wildcard forces EVERYTHING inside the box to be white */
+    [data-testid="stSidebar"] [data-baseweb="select"] *,
+    [data-testid="stSidebar"] [data-baseweb="input"] * {
+        color: white !important;
+        -webkit-text-fill-color: white !important;
+        caret-color: white !important;
     }
 
-    /* Fix the SVG Arrow in Dropdowns */
-    div[data-testid="stSidebar"] div[data-baseweb="select"] svg {
-        fill: #ffffff !important;
-    }
-
-    /* 2. FORCE "RUN ANALYSIS" BUTTON TEXT WHITE */
-    div[data-testid="stSidebar"] button {
-        background-color: #262730 !important;
-        border: 1px solid #4a4a4a !important;
-    }
-    div[data-testid="stSidebar"] button p {
-        color: #ffffff !important; /* Forces the text inside button to be white */
-    }
-    div[data-testid="stSidebar"] button:hover p {
-        color: #ffffff !important;
-    }
-    div[data-testid="stSidebar"] button:hover {
-        border-color: #ffffff !important;
-        background-color: #000000 !important;
-    }
-
-    /* 3. FIX THE DROPDOWN POPUP MENU (The floating list) */
-    /* This part is tricky because it floats outside the sidebar HTML */
-    
-    /* The Container of the list */
+    /* 3. DROPDOWN MENU - THE POPUP LIST (CRITICAL FIX) */
+    /* This must be global, not scoped to stSidebar */
     ul[data-baseweb="menu"] {
         background-color: #262730 !important;
         border: 1px solid #444 !important;
     }
     
-    /* The List Items (Options) */
+    /* The individual options in the list */
     li[data-baseweb="option"] {
-        color: #ffffff !important; /* Force text white */
         background-color: #262730 !important;
+        color: white !important; /* Force text white */
     }
     
-    /* The text div inside the list item */
+    /* The text inside the option div */
     li[data-baseweb="option"] div {
-        color: #ffffff !important;
+        color: white !important;
     }
     
-    /* Hover State for List Items */
-    li[data-baseweb="option"]:hover {
+    /* Hover state for options */
+    li[data-baseweb="option"]:hover, li[data-baseweb="option"][aria-selected="true"] {
         background-color: #444444 !important;
+        color: white !important;
     }
 
-    /* 4. LABELS OUTSIDE THE BOXES (Name, Revenue) -> KEEP DARK */
-    div[data-testid="stSidebar"] label {
+    /* 4. BUTTONS (Run Analysis) */
+    [data-testid="stSidebar"] button {
+        background-color: #262730 !important;
+        border: 1px solid #4a4a4a !important;
+    }
+    /* Force button text to be white */
+    [data-testid="stSidebar"] button p, 
+    [data-testid="stSidebar"] button div {
+        color: white !important;
+    }
+    [data-testid="stSidebar"] button:hover {
+        background-color: #000000 !important;
+        border-color: white !important;
+    }
+
+    /* 5. LABELS (Keep them dark on the light sidebar background) */
+    [data-testid="stSidebar"] label {
         color: #000000 !important;
         font-weight: 700 !important;
-    }
-    
-    /* 5. NUMBER INPUT +/- BUTTONS */
-    div[data-testid="stSidebar"] button[data-testid="stNumberInputStepDown"],
-    div[data-testid="stSidebar"] button[data-testid="stNumberInputStepUp"] {
-        color: #ffffff !important;
     }
 
     /* =============================================
@@ -138,7 +125,7 @@ st.markdown("""
     
     /* Global Text */
     p, h1, h2, h3, h4, h5, li, span, div { color: #000000; }
-    /* The Sidebar overrides above handle the white text exceptions */
+    /* The sidebar overrides above handle the white text exceptions */
     </style>
     """, unsafe_allow_html=True)
 
