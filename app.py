@@ -14,7 +14,7 @@ st.set_page_config(
 # Force Light Theme & Fix Sidebar Inputs
 st.markdown("""
     <style>
-    /* Force Light Background for Main App */
+    /* Force Light Background */
     .stApp {
         background-color: #ffffff;
         color: #000000;
@@ -26,44 +26,60 @@ st.markdown("""
         border-right: 1px solid #e9ecef;
     }
     
-    /* --- SIDEBAR INPUT FIXES --- */
+    /* --- CRITICAL SIDEBAR INPUT FIXES --- */
     
     /* 1. Labels - Dark & Bold */
     div[data-testid="stSidebar"] label {
         color: #000000 !important;
         font-weight: 700 !important;
+        font-size: 14px !important;
     }
     
-    /* 2. Dropdown & Text Input Box (Name) - Light Green Background, Black Text */
-    div[data-testid="stSelectbox"] > div > div,
+    /* 2. NUMBER INPUTS (The Drag Boxes) - Force Light Green Background */
+    div[data-testid="stSidebar"] div[data-testid="stNumberInput"] div[data-baseweb="input"] {
+        background-color: #e6fffa !important; /* Light Green */
+        border: 1px solid #008000 !important; /* Green Border */
+    }
+    
+    /* 3. NUMBER INPUT TEXT - Force Black */
+    div[data-testid="stSidebar"] div[data-testid="stNumberInput"] input {
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important; /* Critical Fix for Chrome/Safari */
+        caret-color: #000000 !important; /* Cursor Color */
+        font-weight: 600 !important;
+    }
+    
+    /* 4. +/- Buttons on Number Inputs - Force Black */
+    div[data-testid="stSidebar"] div[data-testid="stNumberInput"] button {
+        color: #000000 !important;
+    }
+
+    /* 5. Dropdown Box (Selectbox) - Light Green */
+    div[data-testid="stSelectbox"] > div > div {
+        background-color: #e6fffa !important;
+        border: 1px solid #008000 !important;
+        color: #000000 !important;
+    }
+    
+    /* 6. Text Input Box (Name) - Light Green */
     div[data-testid="stTextInput"] > div > div {
         background-color: #e6fffa !important;
         border: 1px solid #008000 !important;
     }
     
+    /* 7. Dropdown & Text Input Text - Black */
     div[data-testid="stSelectbox"] div[data-testid="stMarkdownContainer"] p,
     div[data-testid="stTextInput"] input {
-        color: #000000 !important; /* Black text for Green boxes */
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
     }
     
-    /* 3. NUMBER INPUTS (The Drag Boxes) - Fix Visibility */
-    /* Since these stay dark, we force the text to be WHITE */
-    div[data-testid="stNumberInput"] input {
-        color: #ffffff !important; /* WHITE TEXT */
-        font-weight: 600 !important;
-    }
-    
-    /* Optional: Ensure the +/- buttons are also visible */
-    div[data-testid="stNumberInput"] button {
-        color: #ffffff !important;
-    }
-
-    /* 4. Dropdown SVG Icons - Black */
+    /* 8. Dropdown SVG Icons - Black */
     div[data-testid="stSelectbox"] svg {
         fill: #000000 !important;
     }
     
-    /* 5. Dropdown Options Menu */
+    /* 9. Dropdown Options Menu */
     div[role="listbox"] {
         background-color: #ffffff !important;
     }
@@ -122,11 +138,6 @@ st.markdown("""
     /* Global Text Visibility */
     p, h1, h2, h3, h4, h5, li, span, div {
         color: #000000;
-    }
-    /* Except inside the number inputs */
-    div[data-testid="stNumberInput"] p,
-    div[data-testid="stNumberInput"] div {
-        color: inherit; 
     }
     </style>
     """, unsafe_allow_html=True)
@@ -263,7 +274,7 @@ def main():
             st.subheader("Borrower Details")
             company_input = st.text_input("Name", "New Applicant")
             
-            # --- NUMBER INPUTS: ALLOW NEGATIVES ---
+            # --- NUMBER INPUTS: ALLOW NEGATIVES & VISIBLE BOXES ---
             with st.expander("Profit & Loss", expanded=True):
                 rev = st.number_input("Revenue", value=10000.0, step=100.0, min_value=-1e9, format="%.2f")
                 ebit = st.number_input("EBIT", value=2000.0, step=100.0, min_value=-1e9, format="%.2f")
