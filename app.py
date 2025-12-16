@@ -26,60 +26,53 @@ st.markdown("""
         border-right: 1px solid #e9ecef;
     }
     
-    /* --- CRITICAL SIDEBAR INPUT FIXES --- */
+    /* --- SIDEBAR INPUT FIXES --- */
     
     /* 1. Labels - Dark & Bold */
     div[data-testid="stSidebar"] label {
         color: #000000 !important;
         font-weight: 700 !important;
-        font-size: 14px !important;
     }
     
-    /* 2. NUMBER INPUTS (The Drag Boxes) - Force Light Green Background */
-    div[data-testid="stSidebar"] div[data-testid="stNumberInput"] div[data-baseweb="input"] {
-        background-color: #e6fffa !important; /* Light Green */
-        border: 1px solid #008000 !important; /* Green Border */
-    }
-    
-    /* 3. NUMBER INPUT TEXT - Force Black */
-    div[data-testid="stSidebar"] div[data-testid="stNumberInput"] input {
-        color: #000000 !important;
-        -webkit-text-fill-color: #000000 !important; /* Critical Fix for Chrome/Safari */
-        caret-color: #000000 !important; /* Cursor Color */
-        font-weight: 600 !important;
-    }
-    
-    /* 4. +/- Buttons on Number Inputs - Force Black */
-    div[data-testid="stSidebar"] div[data-testid="stNumberInput"] button {
-        color: #000000 !important;
-    }
-
-    /* 5. Dropdown Box (Selectbox) - Light Green */
-    div[data-testid="stSelectbox"] > div > div {
-        background-color: #e6fffa !important;
-        border: 1px solid #008000 !important;
-        color: #000000 !important;
-    }
-    
-    /* 6. Text Input Box (Name) - Light Green */
+    /* 2. Dropdown Box & Text Input Backgrounds - Light Green */
+    div[data-testid="stSelectbox"] > div > div,
     div[data-testid="stTextInput"] > div > div {
         background-color: #e6fffa !important;
         border: 1px solid #008000 !important;
     }
     
-    /* 7. Dropdown & Text Input Text - Black */
-    div[data-testid="stSelectbox"] div[data-testid="stMarkdownContainer"] p,
-    div[data-testid="stTextInput"] input {
-        color: #000000 !important;
-        -webkit-text-fill-color: #000000 !important;
+    /* 3. NUMBER INPUTS (The Drag Boxes) - Background */
+    div[data-testid="stNumberInput"] div[data-baseweb="input"] {
+        background-color: #e6fffa !important;
+        border: 1px solid #008000 !important;
     }
     
-    /* 8. Dropdown SVG Icons - Black */
-    div[data-testid="stSelectbox"] svg {
+    /* --- FIX: MAKE SIDEBAR TEXT WHITE FOR VISIBILITY --- */
+    
+    /* Fix 1: Dropdown Text (Company Names) -> WHITE */
+    section[data-testid="stSidebar"] div[data-testid="stSelectbox"] p {
+         color: #ffffff !important;
+    }
+    
+    /* Fix 2: Sidebar Buttons (Run Analysis) Text -> WHITE */
+    section[data-testid="stSidebar"] button {
+         color: #ffffff !important;
+    }
+
+    /* Keep number input text black as requested previously */
+    div[data-testid="stNumberInput"] input {
+        background-color: transparent !important;
+        color: #000000 !important; 
+        font-weight: 600 !important;
+    }
+
+    /* Dropdown SVG Icons */
+    div[data-testid="stSelectbox"] svg, 
+    div[data-testid="stNumberInput"] svg {
         fill: #000000 !important;
     }
     
-    /* 9. Dropdown Options Menu */
+    /* Dropdown Options Menu (When clicked) */
     div[role="listbox"] {
         background-color: #ffffff !important;
     }
@@ -142,18 +135,31 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. DATA LOADING ENGINE ---
+# --- 2. DATA LOADING ENGINE (FIXED FOR COMMAS) ---
 @st.cache_data
 def load_dataset():
     try:
-        df = pd.read_csv("financials_master.csv")
+        # Read all as strings first to safely handle commas
+        df = pd.read_csv("financials_master.csv", dtype=str)
+        
         cols = ['Revenue', 'EBITDA', 'EBIT', 'PAT', 'Interest', 
                 'TotalAssets', 'TotalDebt', 'Equity', 'CurrentAssets', 'CurrentLiabilities',
                 'Inventory', 'Receivables', 'Cash',
                 'CFO', 'CFI', 'CFF', 'Capex']
+        
+        # Clean and convert data
         for c in cols:
-            if c not in df.columns: df[c] = 0
-            df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0)
+            if c not in df.columns: 
+                df[c] = 0
+            else:
+                # Remove commas and convert to numeric
+                df[c] = df[c].str.replace(',', '', regex=True)
+                df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0)
+        
+        # Ensure Year is integer
+        if 'Year' in df.columns:
+            df['Year'] = pd.to_numeric(df['Year'], errors='coerce').fillna(0).astype(int)
+            
         return df
     except FileNotFoundError:
         return pd.DataFrame()
