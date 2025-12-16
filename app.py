@@ -28,87 +28,92 @@ st.markdown("""
     }
     
     /* =============================================
-       SIDEBAR INPUTS - FORCED DARK MODE WITH WHITE TEXT
+       SIDEBAR INPUTS - UNIFIED SCREENER STYLE (MINT GREEN)
        ============================================= */
 
     /* 1. LABELS (Name, Revenue, etc.) */
     div[data-testid="stSidebar"] label {
-        color: #212529 !important;
+        color: #000000 !important;
         font-weight: 700 !important;
         font-size: 14px !important;
     }
 
-    /* 2. SELECTBOX (The Dropdown) - NUCLEAR FIX */
+    /* 2. SELECTBOX (The Dropdown) - LIGHT GREEN THEME */
     
     /* Target the main container of the selectbox */
     div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
-        background-color: #262730 !important; /* Dark Background */
-        border: 1px solid #444 !important;
-        color: #ffffff !important; /* White Text */
+        background-color: #e6fffa !important; /* Mint Green Background */
+        border: 1px solid #008000 !important; /* Green Border */
+        color: #000000 !important; /* Black Text */
     }
     
-    /* FORCE all text inside the selectbox to be WHITE */
-    div[data-testid="stSelectbox"] div[data-baseweb="select"] * {
-        color: #ffffff !important; 
+    /* FORCE all text inside the selectbox to be BLACK */
+    div[data-testid="stSelectbox"] div[data-baseweb="select"] span {
+        color: #000000 !important; 
     }
     
     /* Target the SVG Arrow icon specifically */
     div[data-testid="stSelectbox"] div[data-baseweb="select"] svg {
-        fill: #ffffff !important;
+        fill: #000000 !important; /* Black Arrow */
     }
 
     /* 3. DROPDOWN MENU OPTIONS (The Popup List) */
     
     /* The container of the options */
     ul[data-baseweb="menu"] {
-        background-color: #262730 !important;
+        background-color: #ffffff !important; /* White Background for list */
+        border: 1px solid #008000 !important;
     }
     
     /* The individual options */
     li[data-baseweb="option"] {
-        background-color: #262730 !important;
-        color: #ffffff !important; /* Force White Text */
+        background-color: #ffffff !important;
+        color: #000000 !important; /* Black Text */
     }
     
     /* The text inside the option */
     li[data-baseweb="option"] div {
-        color: #ffffff !important;
+        color: #000000 !important;
     }
     
     /* Hover state for options */
     li[data-baseweb="option"]:hover, li[data-baseweb="option"][aria-selected="true"] {
-        background-color: #4a4d5a !important;
+        background-color: #e6fffa !important; /* Mint Green Hover */
+        color: #000000 !important;
     }
 
-    /* 4. MANUAL ENTRY INPUTS (Text & Number) */
+    /* 4. MANUAL ENTRY INPUTS (Text & Number) - MATCHING GREEN THEME */
     div[data-testid="stTextInput"] > div > div,
     div[data-testid="stNumberInput"] > div > div {
-        background-color: #262730 !important;
-        border: 1px solid #444 !important;
-        color: #ffffff !important;
+        background-color: #e6fffa !important; /* Mint Green */
+        border: 1px solid #008000 !important; /* Green Border */
+        color: #000000 !important; /* Black Text */
     }
     div[data-testid="stTextInput"] input,
     div[data-testid="stNumberInput"] input {
-        color: #ffffff !important;
-        -webkit-text-fill-color: #ffffff !important;
-        caret-color: #ffffff !important;
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
+        caret-color: #000000 !important;
+        font-weight: 600 !important;
     }
-    /* +/- Buttons */
+    
+    /* +/- Buttons inside Number Input */
     div[data-testid="stNumberInput"] button {
-        color: #ffffff !important;
+        color: #000000 !important;
+        border-left: 1px solid #008000 !important; /* Add separator line */
     }
     div[data-testid="stNumberInput"] button:hover {
-        background-color: #4a4d5a !important;
+        background-color: #bbf7d0 !important; /* Darker Green on Hover */
     }
 
-    /* 5. BUTTONS */
+    /* 5. SIDEBAR BUTTONS */
     div[data-testid="stSidebar"] button {
-        background-color: #343a40 !important;
+        background-color: #2e303d !important; /* Dark Button */
         color: #ffffff !important;
         border: none;
     }
     div[data-testid="stSidebar"] button:hover {
-        background-color: #212529 !important;
+        background-color: #000000 !important;
     }
 
     /* =============================================
@@ -276,7 +281,7 @@ def main():
             st.sidebar.error("Master Dataset not found.")
             st.stop()
         
-        # The CSS above will now force this text to be white
+        # The CSS now forces this selectbox to be Mint Green with Black Text
         company = st.sidebar.selectbox("Name", raw_df['Company'].unique())
         
         if company:
