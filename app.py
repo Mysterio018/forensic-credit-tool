@@ -30,56 +30,56 @@ st.markdown("""
     }
     
     /* =============================================
-       SIDEBAR WIDGET STYLING (Clean & Visible)
+       SIDEBAR WIDGET STYLING (Dark Mode Inputs)
        ============================================= */
 
     /* 1. SIDEBAR LABELS */
     div[data-testid="stSidebar"] label {
-        color: #212529 !important; /* Dark grey text */
+        color: #212529 !important; /* Dark grey text for labels outside boxes */
         font-weight: 600 !important;
         font-size: 14px !important;
     }
 
-    /* 2. SELECTBOX (Dropdowns) -> White background, Black text */
+    /* 2. SELECTBOX (Dropdowns) -> Dark background, White text */
     /* The main box */
     div[data-testid="stSelectbox"] > div > div {
-        background-color: #ffffff !important;
-        border: 1px solid #ced4da !important;
-        color: #212529 !important;
+        background-color: #262730 !important; /* Dark background */
+        border: 1px solid #555 !important;
+        color: #ffffff !important; /* White text */
     }
     /* The text inside the box */
     div[data-testid="stSelectbox"] div[data-testid="stMarkdownContainer"] p {
-        color: #212529 !important; 
+        color: #ffffff !important; 
     }
     /* The arrow icon */
     div[data-testid="stSelectbox"] svg {
-        fill: #212529 !important; 
+        fill: #ffffff !important; 
     }
 
-    /* 3. TEXT INPUT & NUMBER INPUTS (Manual Entry) -> Light background, Black text */
+    /* 3. TEXT INPUT & NUMBER INPUTS (Manual Entry) -> Dark background, White text */
     /* Target the outer container of the input */
     div[data-testid="stTextInput"] > div > div,
     div[data-testid="stNumberInput"] > div > div {
-        background-color: #ffffff !important; /* White background */
-        border: 1px solid #ced4da !important;
-        color: #212529 !important;
+        background-color: #262730 !important; /* Dark background */
+        border: 1px solid #555 !important;
+        color: #ffffff !important; /* White text */
     }
     /* Target the input text itself */
     div[data-testid="stTextInput"] input,
     div[data-testid="stNumberInput"] input {
-        color: #212529 !important;
-        -webkit-text-fill-color: #212529 !important;
-        caret-color: #212529 !important;
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+        caret-color: #ffffff !important; /* White cursor */
     }
     /* Fix +/- buttons in NumberInput so they are visible */
     div[data-testid="stNumberInput"] button {
-        color: #212529 !important;
+        color: #ffffff !important;
         background-color: transparent !important;
         border: none !important;
     }
     /* Hover effect for +/- buttons */
     div[data-testid="stNumberInput"] button:hover {
-        background-color: #e9ecef !important;
+        background-color: #3e404a !important;
     }
 
     /* 4. SIDEBAR BUTTONS (Run Analysis) -> Dark button, White Text */
@@ -101,17 +101,17 @@ st.markdown("""
        ============================================= */
     /* The list container */
     div[role="listbox"] {
-        background-color: #ffffff !important;
-        border: 1px solid #ced4da !important;
+        background-color: #262730 !important; /* Dark background */
+        border: 1px solid #555 !important;
     }
     /* The options inside the list */
     div[role="option"] {
-        color: #212529 !important;
-        background-color: #ffffff !important;
+        color: #ffffff !important; /* White text */
+        background-color: #262730 !important;
     }
     /* Hover and selection state for options */
     div[role="option"]:hover, div[role="option"][aria-selected="true"] {
-        background-color: #e9ecef !important; /* Light grey */
+        background-color: #3e404a !important; /* Lighter dark for hover */
     }
 
     /* =============================================
