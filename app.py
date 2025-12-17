@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import numpy as np
+import yfinance as yf
 
 # --- 1. APP CONFIGURATION & STYLING ---
 st.set_page_config(
@@ -11,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Force Theme & Targeted CSS Fixes
+# Force Theme & Targeted CSS Fixes (The "Nuclear" White Text Fix)
 st.markdown("""
     <style>
     /* =============================================
@@ -93,6 +94,12 @@ st.markdown("""
         color: #000000 !important;
         font-weight: 700 !important;
     }
+    
+    /* 6. NUMBER INPUT +/- BUTTONS */
+    [data-testid="stSidebar"] button[data-testid="stNumberInputStepDown"],
+    [data-testid="stSidebar"] button[data-testid="stNumberInputStepUp"] {
+        color: white !important;
+    }
 
     /* =============================================
        MAIN CONTENT STYLING
@@ -158,7 +165,69 @@ def load_dataset():
     except FileNotFoundError:
         return pd.DataFrame()
 
-# --- 3. UNIFIED CALCULATION ENGINE ---
+# --- 3. YAHOO FINANCE DATA MAPPER ---
+def get_yahoo_data(ticker_symbol):
+    """
+    Fetches live data from Yahoo Finance and maps it to our internal schema.
+    """
+    try:
+        stock = yf.Ticker(ticker_symbol)
+        
+        # Yahoo returns dataframes with dates as columns
+        bs = stock.balance_sheet          # Balance Sheet
+        fin = stock.financials            # Income Statement
+        cf = stock.cashflow               # Cash Flow
+        
+        if bs.empty or fin.empty:
+            return None, "No financial data found for this ticker. Try adding suffix (e.g. '.NS' for India)."
+
+        # Get the most recent year (first column)
+        recent_date = bs.columns[0]
+        year = recent_date.year
+        
+        # Helper to safely get value from Series
+        def get_val(df, keys):
+            for k in keys:
+                if k in df.index:
+                    val = df.loc[k, recent_date]
+                    return float(val) if val is not None else 0.0
+            return 0.0
+
+        # MAPPING LOGIC (Yahoo Label -> Our Label)
+        # Note: We divide by 10,000,000 (1e7) to convert absolute values to Crores
+        data = {
+            'Company': [f"{ticker_symbol.upper()} (Live)"],
+            'Year': [year],
+            'Revenue': [get_val(fin, ['Total Revenue', 'Operating Revenue']) / 1e7],
+            'EBIT': [get_val(fin, ['EBIT', 'Operating Income']) / 1e7],
+            'PAT': [get_val(fin, ['Net Income', 'Net Income Common Stockholders']) / 1e7],
+            'Interest': [get_val(fin, ['Interest Expense', 'Interest Expense Non Operating']) / 1e7],
+            
+            'TotalAssets': [get_val(bs, ['Total Assets']) / 1e7],
+            'TotalDebt': [get_val(bs, ['Total Debt', 'Total Liab', 'Long Term Debt']) / 1e7],
+            'Equity': [get_val(bs, ['Total Stockholder Equity', 'Total Equity Gross Minorities']) / 1e7],
+            'CurrentAssets': [get_val(bs, ['Current Assets', 'Total Current Assets']) / 1e7],
+            'CurrentLiabilities': [get_val(bs, ['Current Liabilities', 'Total Current Liabilities']) / 1e7],
+            'Receivables': [get_val(bs, ['Net Receivables', 'Receivables']) / 1e7],
+            
+            'CFO': [get_val(cf, ['Operating Cash Flow', 'Total Cash From Operating Activities']) / 1e7],
+            'CFI': [get_val(cf, ['Investing Cash Flow', 'Total Cashflows From Investing Activities']) / 1e7],
+            'CFF': [get_val(cf, ['Financing Cash Flow', 'Total Cash From Financing Activities']) / 1e7],
+            'Capex': [get_val(cf, ['Capital Expenditure']) / 1e7] 
+        }
+        
+        # Fallback for Total Debt if not explicitly present
+        if data['TotalDebt'][0] == 0:
+            short_debt = get_val(bs, ['Current Debt', 'Current Debt And Capital Lease Obligation']) / 1e7
+            long_debt = get_val(bs, ['Long Term Debt', 'Long Term Debt And Capital Lease Obligation']) / 1e7
+            data['TotalDebt'] = [short_debt + long_debt]
+
+        return pd.DataFrame(data), None
+
+    except Exception as e:
+        return None, str(e)
+
+# --- 4. UNIFIED CALCULATION ENGINE ---
 def calculate_metrics(df):
     if df.empty: return df
     
@@ -220,7 +289,7 @@ def calculate_metrics(df):
     
     return df
 
-# --- 4. CREDIT MEMO GENERATOR ---
+# --- 5. CREDIT MEMO GENERATOR ---
 def generate_formal_memo(row):
     score = row['Credit_Score']
     
@@ -247,20 +316,36 @@ def generate_formal_memo(row):
 
     return verdict, risk_profile, color_hex, rec_text, forensic_text
 
-# --- 5. MAIN UI ---
+# --- 6. MAIN UI ---
 def main():
     st.sidebar.title("AI-Assisted Forensic Credit Assessment Tool")
-    mode = st.sidebar.radio("Data Source", ["Select from Dataset", "Manual Data Entry"])
+    
+    # ADDED YAHOO FINANCE TO THE OPTIONS
+    mode = st.sidebar.radio("Data Source", ["Live Data (Yahoo Finance)", "Select from Dataset", "Manual Data Entry"])
     
     row = None
     
-    if mode == "Select from Dataset":
+    # --- 1. YAHOO FINANCE LOGIC ---
+    if mode == "Live Data (Yahoo Finance)":
+        st.sidebar.info("Enter Ticker (e.g., 'INFY.NS' for Infosys, 'AAPL' for Apple)")
+        ticker = st.sidebar.text_input("Ticker Symbol", "RELIANCE.NS")
+        
+        if st.sidebar.button("Fetch & Analyze"):
+            with st.spinner("Fetching data from Yahoo Finance..."):
+                yahoo_df, error = get_yahoo_data(ticker)
+                if error:
+                    st.sidebar.error(f"Error: {error}")
+                else:
+                    df_proc = calculate_metrics(yahoo_df)
+                    row = df_proc.iloc[0]
+
+    # --- 2. DATASET LOGIC ---
+    elif mode == "Select from Dataset":
         raw_df = load_dataset()
         if raw_df.empty:
             st.sidebar.error("Master Dataset not found.")
             st.stop()
         
-        # CSS forces this box to be Dark with White Text
         company = st.sidebar.selectbox("Name", raw_df['Company'].unique())
         
         if company:
@@ -271,31 +356,31 @@ def main():
                 df_proc = calculate_metrics(raw_df)
                 row = df_proc[(df_proc['Company'] == company) & (df_proc['Year'] == year)].iloc[0]
 
+    # --- 3. MANUAL ENTRY LOGIC ---
     else:
         with st.sidebar.form("manual_entry"):
             st.subheader("Borrower Details")
             company_input = st.text_input("Name", "New Applicant")
             
-            # --- NUMBER INPUTS ---
-            with st.expander("Profit & Loss", expanded=True):
-                rev = st.number_input("Revenue", value=10000.0, step=100.0, min_value=-1e9, format="%.2f")
-                ebit = st.number_input("EBIT", value=2000.0, step=100.0, min_value=-1e9, format="%.2f")
-                pat = st.number_input("Net Profit (PAT)", value=1500.0, step=100.0, min_value=-1e9, format="%.2f")
-                interest = st.number_input("Interest Expense", value=500.0, step=50.0, min_value=-1e9, format="%.2f")
+            with st.expander("Profit & Loss (INR Cr)", expanded=True):
+                rev = st.number_input("Revenue", value=10000.0, step=100.0, format="%.2f")
+                ebit = st.number_input("EBIT", value=2000.0, step=100.0, format="%.2f")
+                pat = st.number_input("Net Profit (PAT)", value=1500.0, step=100.0, format="%.2f")
+                interest = st.number_input("Interest Expense", value=500.0, step=50.0, format="%.2f")
             
-            with st.expander("Balance Sheet", expanded=False):
-                ta = st.number_input("Total Assets", value=15000.0, step=100.0, min_value=-1e9, format="%.2f")
-                debt = st.number_input("Total Debt", value=5000.0, step=100.0, min_value=-1e9, format="%.2f")
-                equity = st.number_input("Equity", value=8000.0, step=100.0, min_value=-1e9, format="%.2f")
-                ca = st.number_input("Current Assets", value=6000.0, step=100.0, min_value=-1e9, format="%.2f")
-                cl = st.number_input("Current Liab.", value=4000.0, step=100.0, min_value=-1e9, format="%.2f")
-                rec = st.number_input("Receivables", value=2000.0, step=100.0, min_value=-1e9, format="%.2f")
+            with st.expander("Balance Sheet (INR Cr)", expanded=False):
+                ta = st.number_input("Total Assets", value=15000.0, step=100.0, format="%.2f")
+                debt = st.number_input("Total Debt", value=5000.0, step=100.0, format="%.2f")
+                equity = st.number_input("Equity", value=8000.0, step=100.0, format="%.2f")
+                ca = st.number_input("Current Assets", value=6000.0, step=100.0, format="%.2f")
+                cl = st.number_input("Current Liab.", value=4000.0, step=100.0, format="%.2f")
+                rec = st.number_input("Receivables", value=2000.0, step=100.0, format="%.2f")
             
-            with st.expander("Cash Flow", expanded=False):
-                cfo = st.number_input("CFO (Operating)", value=1200.0, step=100.0, min_value=-1e9, format="%.2f")
-                cfi = st.number_input("CFI (Investing)", value=-500.0, step=100.0, min_value=-1e9, format="%.2f")
-                cff = st.number_input("CFF (Financing)", value=-200.0, step=100.0, min_value=-1e9, format="%.2f")
-                capex = st.number_input("Capex", value=-300.0, step=100.0, min_value=-1e9, format="%.2f")
+            with st.expander("Cash Flow (INR Cr)", expanded=False):
+                cfo = st.number_input("CFO (Operating)", value=1200.0, step=100.0, format="%.2f")
+                cfi = st.number_input("CFI (Investing)", value=-500.0, step=100.0, format="%.2f")
+                cff = st.number_input("CFF (Financing)", value=-200.0, step=100.0, format="%.2f")
+                capex = st.number_input("Capex", value=-300.0, step=100.0, format="%.2f")
             
             if st.form_submit_button("Run Analysis"):
                 data = {
@@ -307,228 +392,105 @@ def main():
                 df_proc = calculate_metrics(pd.DataFrame(data))
                 row = df_proc.iloc[0]
 
+    # --- REPORT RENDERER (VERDICT FIRST STRUCTURE) ---
     if row is not None:
-        # HEADER
-        st.markdown(f"## Credit Report — {row['Company']}")
-        st.markdown(f"**FY:** {row['Year']} | **Source:** {mode} | **Generated by:** Auto-Assessment")
-        st.caption("ℹ️ Note: All financial values are in INR Crores.")
+        c1, c2 = st.columns([3, 1])
+        with c1:
+            st.markdown(f"## Credit Assessment: {row['Company']}")
+            st.markdown(f"**FY:** {row['Year']} | **Analysis Type:** Forensic & Fundamental")
+        with c2:
+            st.metric("Risk Score", f"{int(row['Credit_Score'])} / 100")
+        
         st.markdown("---")
 
-        # TABS
         tabs = st.tabs([
-            "Overview", "Financial Analysis", "DuPont & Earnings", 
-            "Forensic Checks", "Distress & EWS", "Cash Flow", "Verdict"
+            "📝 Executive Verdict", 
+            "⚠️ Forensic & Distress", 
+            "📊 Financial Analysis", 
+            "💧 Cash Flow", 
         ])
 
-        # TAB 1: OVERVIEW
         with tabs[0]:
-            st.subheader("Executive Snapshot")
-            c1, c2, c3, c4, c5 = st.columns(5)
-            c1.metric("Revenue", f"{row['Revenue']:,.0f}")
-            c2.metric("Net Profit", f"{row['PAT']:,.0f}")
-            c3.metric("Total Debt", f"{row['TotalDebt']:,.0f}")
-            c4.metric("Op. Cash Flow", f"{row['CFO']:,.0f}")
-            c5.metric("Composite Score", f"{int(row['Credit_Score'])}")
-            
-            # --- OVERVIEW CHARTS ---
-            st.markdown("### Key Financial Visuals")
-            g1, g2 = st.columns(2)
-            
-            with g1:
-                # Capital Structure (Donut)
-                cap_fig = go.Figure(data=[go.Pie(
-                    labels=['Total Debt', 'Equity'],
-                    values=[row['TotalDebt'], row['Equity']],
-                    hole=.4,
-                    marker_colors=['#dc2626', '#008000'],
-                    textfont=dict(color='black')
-                )])
-                cap_fig.update_layout(
-                    title={'text': "Capital Structure (Debt vs Equity)", 'font': {'color': 'black'}},
-                    font=dict(color='black'),
-                    height=300, 
-                    template="plotly_white", 
-                    paper_bgcolor='rgba(0,0,0,0)', 
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    legend=dict(font=dict(color='black'))
-                )
-                st.plotly_chart(cap_fig, use_container_width=True)
-            
-            with g2:
-                # Profitability Bar
-                prof_fig = go.Figure([go.Bar(
-                    x=['Revenue', 'EBIT', 'Net Profit'],
-                    y=[row['Revenue'], row['EBIT'], row['PAT']],
-                    marker_color=['#2563eb', '#3b82f6', '#008000'],
-                    texttemplate='%{y:.2s}', textposition='auto',
-                    textfont=dict(color='black')
-                )])
-                prof_fig.update_layout(
-                    title={'text': "Profitability Composition", 'font': {'color': 'black'}},
-                    font=dict(color='black'),
-                    xaxis=dict(tickfont=dict(color='black'), title_font=dict(color='black')),
-                    yaxis=dict(tickfont=dict(color='black'), title_font=dict(color='black')),
-                    height=300, 
-                    template="plotly_white",
-                    paper_bgcolor='rgba(0,0,0,0)', 
-                    plot_bgcolor='rgba(0,0,0,0)'
-                )
-                st.plotly_chart(prof_fig, use_container_width=True)
-
-        # TAB 2: FINANCIAL ANALYSIS
-        with tabs[1]:
-            st.subheader("A. Return Ratios")
-            c1, c2, c3 = st.columns(3)
-            c1.metric("ROCE %", f"{row['ROCE']:.1f}%")
-            c2.metric("ROE %", f"{row['ROE']:.1f}%")
-            c3.metric("ROA %", f"{row['ROA']:.1f}%")
-
-            st.divider()
-            st.subheader("B. Liquidity & Efficiency")
-            c4, c5, c6 = st.columns(3)
-            c4.metric("Current Ratio", f"{row['Current_Ratio']:.2f}x")
-            c5.metric("Debtor Days", f"{row['Debtor_Days']:.0f} Days")
-            c6.metric("Asset Turnover", f"{row['Asset_Turnover']:.2f}x")
-
-            st.divider()
-            st.subheader("C. Solvency")
-            c7, c8 = st.columns(2)
-            c7.metric("Debt-to-Equity", f"{row['Debt_Equity']:.2f}x")
-            c8.metric("Interest Coverage", f"{row['ICR']:.2f}x")
-
-        # TAB 3: DUPONT
-        with tabs[2]:
-            st.subheader("A. DuPont Decomposition")
-            dupont_df = pd.DataFrame({
-                'Component': ['Net Margin', 'Asset Turnover', 'Financial Leverage'],
-                'Contribution': [row['Dupont_NPM']*100, row['Asset_Turnover'], row['Fin_Leverage']],
-                'Type': ['Efficiency', 'Efficiency', 'Risk']
-            })
-            fig_dupont = px.bar(dupont_df, x='Component', y='Contribution', color='Type', 
-                                title=f"ROE: {row['ROE']:.1f}% Breakdown", text_auto='.2f',
-                                color_discrete_map={'Efficiency': '#3b82f6', 'Risk': '#f59e0b'})
-            fig_dupont.update_layout(
-                title_font_color="black",
-                height=350, 
-                template="plotly_white",
-                paper_bgcolor='rgba(0,0,0,0)', 
-                plot_bgcolor='rgba(0,0,0,0)', 
-                font=dict(color='black'),
-                xaxis=dict(tickfont=dict(color='black'), title_font=dict(color='black')),
-                yaxis=dict(tickfont=dict(color='black'), title_font=dict(color='black')),
-                legend=dict(font=dict(color='black'))
-            )
-            fig_dupont.update_traces(textfont=dict(color='black'))
-            st.plotly_chart(fig_dupont, use_container_width=True)
-
-            st.divider()
-            st.subheader("B. Earnings Quality")
-            c1, c2 = st.columns(2)
-            c1.metric("CFO / PAT Ratio", f"{row['CFO_to_PAT']:.2f}")
-            c2.metric("Accruals Ratio", f"{row['Accruals_Ratio']:.2f}")
-
-        # TAB 4: FORENSIC
-        with tabs[3]:
-            st.subheader("Forensic Diagnostics")
+            verdict, r_profile, color, rec, forensics = generate_formal_memo(row)
+            st.markdown(f"""
+                <div class="verdict-box" style="border-left: 5px solid {color};">
+                    <h3 style="color: {color}; margin:0;">RECOMMENDATION: {verdict}</h3>
+                    <p style="font-size: 16px; margin: 5px 0 0 0;"><strong>Risk Profile:</strong> {r_profile}</p>
+                </div>
+            """, unsafe_allow_html=True)
             col1, col2 = st.columns(2)
             with col1:
-                st.markdown("#### 1. Cash Realization Check")
-                val = row['CFO_to_PAT']
-                if val < 0.8: st.error(f"Alert: Weak Cash Conversion ({val:.2f}). Paper profits.")
-                else: st.success(f"Pass: Healthy Cash Conversion ({val:.2f}).")
+                st.subheader("Financial Assessment")
+                st.info(rec)
             with col2:
-                st.markdown("#### 2. Revenue Manipulation (Beneish Proxy)")
-                if row['Beneish_Flag_DSRI'] == 1: st.error("Alert: Receivables growing faster than Revenue.")
-                else: st.success("Pass: Revenue growth consistent with Receivables.")
+                st.subheader("Forensic Flags")
+                if "No material" in forensics: st.success(forensics)
+                else: st.warning(forensics)
+            
+            st.subheader("Key Performance Indicators (In Cr)")
+            k1, k2, k3, k4 = st.columns(4)
+            k1.metric("Revenue", f"{row['Revenue']:,.0f}")
+            k2.metric("Net Profit", f"{row['PAT']:,.0f}")
+            k3.metric("EBITDA Margin", f"{(row['EBIT'])/row['Revenue']*100:.1f}%" if row['Revenue'] else "N/A")
+            k4.metric("Debt/Equity", f"{row['Debt_Equity']:.2f}x")
 
-        # TAB 5: DISTRESS
-        with tabs[4]:
-            st.subheader("Financial Distress Model")
+        with tabs[1]:
+            st.subheader("1. Bankruptcy Prediction (Altman Z''-Score)")
             z = row['Z_Score']
             fig_gauge = go.Figure(go.Indicator(
                 mode = "gauge+number", value = z,
-                title = {'text': "Altman Z''-Score", 'font': {'color': 'black'}},
-                number = {'font': {'color': 'black'}},
+                title = {'text': "Z''-Score", 'font': {'color': 'black'}},
                 gauge = {
-                    'axis': {'range': [None, 5], 'tickfont': {'color': 'black'}},
+                    'axis': {'range': [None, 5]},
                     'bar': {'color': "black"},
                     'steps': [{'range': [0, 1.23], 'color': "#ffcccb"}, 
                               {'range': [1.23, 2.9], 'color': "#fff4cc"}, 
                               {'range': [2.9, 5], 'color': "#d4edda"}]
                 }
             ))
-            fig_gauge.update_layout(height=350, margin=dict(t=50, b=50, l=30, r=30), 
-                                    template="plotly_white",
-                                    paper_bgcolor='rgba(0,0,0,0)', font={'color': 'black'})
+            fig_gauge.update_layout(height=250, margin=dict(t=30, b=30, l=30, r=30))
             st.plotly_chart(fig_gauge, use_container_width=True)
             
-            if z > 2.9: st.success("Zone: SAFE (> 2.9)")
-            elif z > 1.23: st.warning("Zone: GREY (1.23 - 2.9)")
-            else: st.error("Zone: DISTRESS (< 1.23)")
+            c1, c2 = st.columns(2)
+            with c1:
+                st.markdown("### 2. Earnings Quality")
+                val = row['CFO_to_PAT']
+                st.metric("CFO / PAT Ratio", f"{val:.2f}x")
+                if val < 0.8: st.error("⚠️ **Alert:** Profits may be artificial (Low Cash Conversion).")
+                else: st.success("✅ **Pass:** Profits are backed by cash.")
+            
+            with c2:
+                st.markdown("### 3. Revenue Integrity")
+                st.metric("Beneish DSRI Flag", "Triggered" if row['Beneish_Flag_DSRI'] else "Clean")
+                if row['Beneish_Flag_DSRI'] == 1: st.error("⚠️ **Alert:** Receivables growing much faster than Sales.")
+                else: st.success("✅ **Pass:** Revenue/Receivable growth is aligned.")
+
+        with tabs[2]:
+            st.subheader("DuPont Analysis (ROE Breakdown)")
+            dupont_df = pd.DataFrame({
+                'Driver': ['Net Margin', 'Asset Turns', 'Leverage'],
+                'Value': [row['Dupont_NPM']*100, row['Asset_Turnover'], row['Fin_Leverage']]
+            })
+            fig_dupont = px.bar(dupont_df, x='Driver', y='Value', text_auto='.2f', 
+                                title=f"ROE: {row['ROE']:.1f}% Components", color='Driver')
+            st.plotly_chart(fig_dupont, use_container_width=True)
 
             st.divider()
-            st.subheader("Early Warning Signals")
-            ews_list = []
-            if row['Current_Ratio'] < 1.0: ews_list.append("Liquidity Stress: Current Ratio < 1.0")
-            if row['Debt_Equity'] > 2.0: ews_list.append("Leverage Warning: D/E > 2.0")
-            if row['ICR'] < 1.5: ews_list.append("Solvency Warning: Interest Coverage < 1.5")
-            
-            if not ews_list: st.info("No active Early Warning Signals detected.")
-            else: 
-                for signal in ews_list: st.markdown(f"- {signal}")
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Current Ratio", f"{row['Current_Ratio']:.2f}")
+            c2.metric("Interest Cov.", f"{row['ICR']:.2f}")
+            c3.metric("Debtor Days", f"{row['Debtor_Days']:.0f}")
+            c4.metric("ROCE", f"{row['ROCE']:.1f}%")
 
-        # TAB 6: CASH FLOW
-        with tabs[5]:
-            st.subheader("Cash Flow Structure")
+        with tabs[3]:
+            st.subheader("Cash Flow Waterfall")
             cf_df = pd.DataFrame({
-                'Activity': ['Operating', 'Investing', 'Financing'],
+                'Type': ['Operations', 'Investing', 'Financing'],
                 'Amount': [row['CFO'], row['CFI'], row['CFF']]
             })
-            fig_cf = px.bar(cf_df, x='Activity', y='Amount', color='Amount', 
-                            title="Cash Flow Waterfall", color_continuous_scale='Bluered_r',
-                            text_auto='.2s')
-            
-            fig_cf.update_layout(
-                title_font_color="black",
-                height=350, 
-                template="plotly_white",
-                paper_bgcolor='rgba(0,0,0,0)', 
-                plot_bgcolor='rgba(0,0,0,0)', 
-                font=dict(color='black'),
-                xaxis=dict(tickfont=dict(color='black'), title_font=dict(color='black')),
-                yaxis=dict(tickfont=dict(color='black'), title_font=dict(color='black'))
-            )
-            fig_cf.update_traces(textfont=dict(color='black'))
+            fig_cf = px.bar(cf_df, x='Type', y='Amount', color='Amount', color_continuous_scale='RdBu')
             st.plotly_chart(fig_cf, use_container_width=True)
-            st.info(f"**Implied Life Cycle Stage:** {row['Life_Cycle']}")
-
-        # TAB 7: DECISION
-        with tabs[6]:
-            verdict, r_profile, color, rec, forensics = generate_formal_memo(row)
-            
-            st.markdown(f"""
-                <div class="verdict-box">
-                    <div style="font-size: 24px; font-weight: bold; color: {color}; margin-bottom: 10px;">{verdict}</div>
-                    <div style="font-size: 16px; color: #333;">Risk Profile: <strong>{r_profile}</strong> | Score: {int(row['Credit_Score'])}/100</div>
-                </div>
-            """, unsafe_allow_html=True)
-            
-            st.subheader("Credit Assessment Note")
-            st.markdown(f"""
-            <div style="color: #333;">
-            <strong>1. Financial Assessment</strong><br>
-            {rec}<br><br>
-            <strong>2. Forensic & Compliance Findings</strong><br>
-            {forensics}<br><br>
-            <strong>3. Final Recommendation</strong><br>
-            Based on the quantitative models, the system recommends: <strong>{verdict}</strong>.
-            </div>
-            """, unsafe_allow_html=True)
-
-    elif mode == "Select from Dataset" and row is None:
-        st.info("👈 Select a company from the sidebar to generate a report.")
-    elif mode == "Manual Data Entry" and row is None:
-        st.info("👈 Fill in the financial details and click 'Run Analysis'.")
+            st.info(f"**Implied Business Phase:** {row['Life_Cycle']}")
 
 if __name__ == "__main__":
     main()
